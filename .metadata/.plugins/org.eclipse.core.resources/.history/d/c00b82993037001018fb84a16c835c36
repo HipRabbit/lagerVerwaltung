@@ -1,0 +1,190 @@
+package thw.edu.javaII.port.warehouse.ui;
+
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Toolkit;
+
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
+
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.ui.panels.*;
+
+public class LagerUI extends JFrame {
+
+    private static final long serialVersionUID = -5670441158631808726L;
+    private JPanel contentPane, pnCopyright;
+    private Session ses;
+    private JFrame parent;
+    private JMenuBar menuBar;
+    private JMenu menuDatei,  menuLagerplatz;
+    private JMenuItem miBeenden, miStartseite, miServerBeenden, miBestand, miStatistik, miSuchen, miInfo, miLager, miProdukt,
+                      miKundenDatenbank, miBestellungPage,
+                      miLagerplatzAnlegen, miLagerplatzBearbeiten, miLagerplatzLoeschen, miLagerplatzAnzeigen, miDatenbank;
+                   
+    private JLabel lblCopyright;
+
+    public static void run(Session ses) {
+        EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                try {
+                    LagerUI frame = new LagerUI(ses);
+                    frame.setVisible(true);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public LagerUI(Session ses) {
+        this.ses = ses;
+        parent = this;
+        setTitle("Lagerverwaltung");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        Dimension ss = Toolkit.getDefaultToolkit().getScreenSize();
+        Dimension frameSize = new Dimension(800, 600);
+        setBounds(ss.width / 2 - frameSize.width / 2, ss.height / 2 - frameSize.height / 2, frameSize.width, frameSize.height);
+        contentPane = new JPanel();
+        contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+        contentPane.setLayout(new BorderLayout(0, 0));
+        setContentPane(contentPane);
+        contentPane.add(new WelcomePage(), BorderLayout.CENTER);
+        generateMenu();
+        generateFooter();
+    }
+
+    private void generateFooter() {
+        pnCopyright = new JPanel();
+        FlowLayout fl_pnCopyright = (FlowLayout) pnCopyright.getLayout();
+        fl_pnCopyright.setVgap(1);
+        fl_pnCopyright.setAlignment(FlowLayout.RIGHT);
+        lblCopyright = new JLabel("Copyright Tobias Wenninger");
+        lblCopyright.setHorizontalAlignment(SwingConstants.RIGHT);
+        lblCopyright.setFont(new Font("Lucida Grande", Font.ITALIC, 12));
+        contentPane.add(pnCopyright, BorderLayout.SOUTH);
+        pnCopyright.add(lblCopyright);
+    }
+
+    private void generateMenu() {
+        menuBar = new JMenuBar();
+        
+        // Datei-Menü
+        menuDatei = new JMenu("Datei");
+        menuDatei.setPreferredSize(new Dimension(160, menuDatei.getPreferredSize().height));
+        miBeenden = new JMenuItem("Beenden");
+        miBeenden.setPreferredSize(new Dimension(160, miBeenden.getPreferredSize().height));
+        miBeenden.setActionCommand(MenuActionCommands.BEENDEN.toString());
+        miBeenden.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miStartseite = new JMenuItem("Startseite");
+        miStartseite.setPreferredSize(new Dimension(160, miStartseite.getPreferredSize().height));
+        miStartseite.setActionCommand(MenuActionCommands.STARTSEITE.toString());
+        miStartseite.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        // Datenbank-Menü
+        miDatenbank = new JMenuItem("Datenbank initialisieren");
+        miDatenbank.setActionCommand(MenuActionCommands.DATENBANK.toString());
+        miDatenbank.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miServerBeenden = new JMenuItem("Server Beenden");
+        miServerBeenden.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miServerBeenden.setActionCommand(MenuActionCommands.SERVERBEENDEN.toString());
+
+        // Lager-Menü
+        miLager = new JMenuItem("Lager");
+        miLager.setPreferredSize(new Dimension(160, miLager.getPreferredSize().height));
+        miLager.setActionCommand(MenuActionCommands.LAGER.toString());
+        miLager.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        
+
+
+        // Lagerplatz-Menü
+        menuLagerplatz = new JMenu("Lagerplätze");
+        menuLagerplatz.setPreferredSize(new Dimension(160, menuLagerplatz.getPreferredSize().height));
+        miLagerplatzAnlegen = new JMenuItem("Lagerplatz anlegen");
+        miLagerplatzAnlegen.setPreferredSize(new Dimension(160, miLagerplatzAnlegen.getPreferredSize().height));
+        miLagerplatzAnlegen.setActionCommand(MenuActionCommands.LAGERPLATZ_ANLEGEN.toString());
+        miLagerplatzAnlegen.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miLagerplatzBearbeiten = new JMenuItem("Lagerplatz bearbeiten");
+        miLagerplatzBearbeiten.setPreferredSize(new Dimension(160, miLagerplatzBearbeiten.getPreferredSize().height));
+        miLagerplatzBearbeiten.setActionCommand(MenuActionCommands.LAGERPLATZ_BEARBEITEN.toString());
+        miLagerplatzBearbeiten.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miLagerplatzLoeschen = new JMenuItem("Lagerplatz löschen");
+        miLagerplatzLoeschen.setPreferredSize(new Dimension(160, miLagerplatzLoeschen.getPreferredSize().height));
+        miLagerplatzLoeschen.setActionCommand(MenuActionCommands.LAGERPLATZ_LOESCHEN.toString());
+        miLagerplatzLoeschen.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miLagerplatzAnzeigen = new JMenuItem("Lagerplätze anzeigen");
+        miLagerplatzAnzeigen.setPreferredSize(new Dimension(160, miLagerplatzAnzeigen.getPreferredSize().height));
+        miLagerplatzAnzeigen.setActionCommand(MenuActionCommands.LAGERPLATZ_ANZEIGEN.toString());
+        miLagerplatzAnzeigen.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+
+        // Produkt-Menü
+        miProdukt = new JMenuItem("Produkte");
+        miProdukt.setPreferredSize(new Dimension(160, miProdukt.getPreferredSize().height));
+        miProdukt.setActionCommand(MenuActionCommands.PRODUKT.toString());
+        miProdukt.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        
+
+
+
+        // Bestehende Menüpunkte
+        miBestand = new JMenuItem("Bestand");
+        miBestand.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miBestand.setActionCommand(MenuActionCommands.BESTAND.toString());
+        miBestand.setPreferredSize(new Dimension(160, miBestand.getPreferredSize().height));
+        miStatistik = new JMenuItem("Statistik");
+        miStatistik.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miStatistik.setActionCommand(MenuActionCommands.STATISTIK.toString());
+        miStatistik.setPreferredSize(new Dimension(160, miStatistik.getPreferredSize().height));
+        miSuchen = new JMenuItem("Suchen");
+        miSuchen.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miSuchen.setActionCommand(MenuActionCommands.SUCHEN.toString());
+        miSuchen.setPreferredSize(new Dimension(160, miSuchen.getPreferredSize().height));
+        miInfo = new JMenuItem("Info");
+        miInfo.setPreferredSize(new Dimension(160, miInfo.getPreferredSize().height));
+        miInfo.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miInfo.setActionCommand(MenuActionCommands.INFO.toString());
+        miKundenDatenbank = new JMenuItem("Kundendatenbank");
+        miKundenDatenbank.setPreferredSize(new Dimension(160, miKundenDatenbank.getPreferredSize().height));
+        miKundenDatenbank.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miKundenDatenbank.setActionCommand(MenuActionCommands.KUNDEN_DATENBANK.toString());
+        miBestellungPage = new JMenuItem("Bestellungsübersicht");
+        miBestellungPage.setPreferredSize(new Dimension(160, miBestellungPage.getPreferredSize().height));
+        miBestellungPage.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
+        miBestellungPage.setActionCommand(MenuActionCommands.BESTELLUNG_PAGE.toString());
+
+        setJMenuBar(menuBar);
+        menuBar.add(menuDatei);
+        menuDatei.add(miStartseite);
+        menuDatei.add(miBeenden);
+        menuDatei.add(miServerBeenden);
+        menuDatei.add(miDatenbank);
+        menuBar.add(miLager);
+        menuLagerplatz.add(miLagerplatzAnzeigen);
+        menuLagerplatz.add(miLagerplatzAnlegen);
+        menuLagerplatz.add(miLagerplatzBearbeiten);
+        menuLagerplatz.add(miLagerplatzLoeschen);
+        menuBar.add(miProdukt);
+        menuBar.add(miBestand);
+        menuBar.add(miStatistik);
+        menuBar.add(miSuchen);
+        menuBar.add(miKundenDatenbank);
+        menuBar.add(miBestellungPage);
+        menuBar.add(miInfo);
+    }
+
+    public void refreshBestellungPage() {
+        Component centerComponent = contentPane.getComponent(1);
+        if (centerComponent instanceof BestellungPage) {
+            ((BestellungPage) centerComponent).refresh();
+        }
+    }
+}

@@ -1,0 +1,142 @@
+package thw.edu.javaII.port.warehouse.ui;
+
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.ui.panels.*;
+
+public class LagerUIHandler implements ActionListener {
+    private Session ses;
+    private JFrame frame, parent;
+    private JPanel contentPane;
+
+    public LagerUIHandler(Session ses, JFrame frame, JPanel contentPane, JFrame parent) {
+        super();
+        this.ses = ses;
+        this.frame = frame;
+        this.contentPane = contentPane;
+        this.parent = parent;
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        MenuActionCommands command = MenuActionCommands.valueOf(e.getActionCommand());
+        BorderLayout layout;
+        switch (command) {
+            case BEENDEN:
+                ses.close();
+                frame.dispose();
+                break;
+            case STARTSEITE:
+                layout = (BorderLayout) contentPane.getLayout();
+                contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
+                contentPane.add(new WelcomePage(), BorderLayout.CENTER);
+                frame.setVisible(true);
+                break;
+            case SERVERBEENDEN:
+                ses.getCommunicator().closeServer();
+                frame.dispose();
+                break;
+            case BESTAND:
+                layout = (BorderLayout) contentPane.getLayout();
+                contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
+                contentPane.add(new BestandPage(ses), BorderLayout.CENTER);
+                frame.setVisible(true);
+                break;
+            case STATISTIK:
+                layout = (BorderLayout) contentPane.getLayout();
+                contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
+                contentPane.add(new StatistikPage(ses, parent), BorderLayout.CENTER);
+                frame.setVisible(true);
+                break;
+            case SUCHEN:
+                layout = (BorderLayout) contentPane.getLayout();
+                contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
+                contentPane.add(new SearchPage(ses, parent), BorderLayout.CENTER);
+                frame.setVisible(true);
+                break;
+            case INFO:
+                layout = (BorderLayout) contentPane.getLayout();
+                contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
+                contentPane.add(new InfoPage(), BorderLayout.CENTER);
+                frame.setVisible(true);
+                break;
+            case KUNDEN_DATENBANK:
+                layout = (BorderLayout) contentPane.getLayout();
+                contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
+                contentPane.add(new SearchKunde(ses, parent), BorderLayout.CENTER);
+                frame.setVisible(true);
+                break;
+            case BESTELLUNG_PAGE:
+                layout = (BorderLayout) contentPane.getLayout();
+                contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
+                contentPane.add(new BestellungPage(ses), BorderLayout.CENTER);
+                frame.setVisible(true);
+                break;
+
+            case LAGER_ANZEIGEN:
+                layout = (BorderLayout) contentPane.getLayout();
+                contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
+                contentPane.add(new LagerPage(ses), BorderLayout.CENTER);
+                frame.setVisible(true);
+                break;
+            case LAGERPLATZ_ANLEGEN:
+                new AddLagerPlatz(ses, parent).setVisible(true);
+                break;
+            case LAGERPLATZ_BEARBEITEN:
+                new EditLagerPlatz(ses, parent).setVisible(true);
+                break;
+            case LAGERPLATZ_LOESCHEN:
+                new DeleteLagerPlatz(ses, parent).setVisible(true);
+                break;
+            case LAGERPLATZ_ANZEIGEN:
+                layout = (BorderLayout) contentPane.getLayout();
+                contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
+                contentPane.add(new LagerPlatzPage(ses), BorderLayout.CENTER);
+                frame.setVisible(true);
+                break;
+            case PRODUKT_ANLEGEN:
+                new AddProdukt(ses).setVisible(true); // Korrigierter Aufruf
+                break;
+            case PRODUKT_BEARBEITEN:
+                new EditProdukt(ses, parent).setVisible(true);
+                break;
+            case PRODUKT_LOESCHEN:
+                new DeleteProdukt(ses, parent).setVisible(true);
+                break;
+            case PRODUKT_ANZEIGEN:
+                layout = (BorderLayout) contentPane.getLayout();
+                contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
+                contentPane.add(new ProduktPage(ses), BorderLayout.CENTER);
+                frame.setVisible(true);
+                break;
+            case DATENBANK_INITIALISIEREN:
+                try {
+                    WarehouseDEO deo = new WarehouseDEO();
+                    deo.setZone(Zone.INIT);
+                    deo.setCommand(Command.INIT);
+                    WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
+                    if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                        JOptionPane.showMessageDialog(parent, "Datenbank wurde initialisiert.", "Initialisierung", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(parent, "Fehler: " + ret.getMessage(), "Initialisierungsfehler", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(parent, "Fehler bei der Initialisierung: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}

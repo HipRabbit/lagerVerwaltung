@@ -1,0 +1,2446 @@
+package thw.edu.javaII.port.warehouse.server.data;
+
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import thw.edu.javaII.port.warehouse.init.Initializer;
+import thw.edu.javaII.port.warehouse.model.DemoModel;
+import thw.edu.javaII.port.warehouse.model.Lager;
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+import thw.edu.javaII.port.warehouse.model.Kunde;
+import thw.edu.javaII.port.warehouse.model.Bestellung;
+import thw.edu.javaII.port.warehouse.model.BestellungProdukt;
+import thw.edu.javaII.port.warehouse.model.common.Info;
+
+public class Database implements IStorage {
+    private static final String driverClass = "org.sqlite.JDBC";
+    private static final String dbUrl = "jdbc:sqlite:warehouse.sqlite";
+    private Initializer init;
+    private Logger logger;
+
+    public Database() throws Exception {
+        try {
+            Class.forName(driverClass);
+            init = new Initializer();
+            logger = System.getLogger(Info.LOG_NAME);
+        } catch (ClassNotFoundException e) {
+            throw new Exception(e);
+        }
+    }
+
+    @Override
+    public void initLager(List<Lager> list) {
+        if (!tableExists("LAGER")) {
+            Connection con = null;
+            Statement st = null;
+            try {
+                con = DriverManager.getConnection(dbUrl);
+                st = con.createStatement();
+                String sql = "CREATE TABLE IF NOT EXISTS LAGER (id integer PRIMARY KEY, name text NOT NULL, ort text, art text)";
+                st.executeUpdate(sql);
+                for (Lager mod : init.getLager()) {
+                    addLager(mod);
+                }
+            } catch (SQLException e) {
+                logger.log(Level.ERROR, e);
+                e.printStackTrace();
+            } finally {
+                if (st != null) {
+                    try {
+                        st.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (con != null) {
+                    try {
+                        con.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        } else {
+            turncateTable("LAGER");
+            for (Lager mod : init.getLager()) {
+                addLager(mod);
+            }
+        }
+    }
+
+    @Override
+    public void addLager(Lager model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "INSERT INTO LAGER (id,name,ort,art) VALUES (" + model.getId() + ", '" + model.getName()
+                    + "', '" + model.getOrt() + "', '" + model.getArt() + "')";
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void updateLager(Lager model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "UPDATE LAGER SET name='" + model.getName() + "', ort='" + model.getOrt() + "', art='"
+                    + model.getArt() + "' WHERE id=" + model.getId();
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void deleteLager(Lager model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "DELETE FROM LAGER WHERE id=" + model.getId();
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public List<Lager> getLagers() {
+        List<Lager> l = new ArrayList<Lager>();
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT * FROM LAGER";
+            rs = st.executeQuery(sql);
+
+            while (rs.next()) {
+                int id = rs.getInt("ID");
+                String name = rs.getString("NAME");
+                String ort = rs.getString("ORT");
+                String art = rs.getString("ART");
+                l.add(new Lager(id, name, ort, art));
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return l;
+    }
+
+    public Lager getLagerById(int id) {
+        Lager model = new Lager();
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT * FROM LAGER WHERE id=" + id;
+            rs = st.executeQuery(sql);
+
+            rs.next();
+            model.setId(id);
+            String name = rs.getString("NAME");
+            String ort = rs.getString("ORT");
+            String art = rs.getString("ART");
+            model.setName(name);
+            model.setOrt(ort);
+            model.setArt(art);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return model;
+    }
+
+    @Override
+    public void initLagerPlatz(List<LagerPlatz> list) {
+        if (!tableExists("LAGERPLATZ")) {
+            Connection con = null;
+            Statement st = null;
+            try {
+                con = DriverManager.getConnection(dbUrl);
+                st = con.createStatement();
+                String sql = "CREATE TABLE IF NOT EXISTS LAGERPLATZ (id integer PRIMARY KEY, name text NOT NULL, kapazitaet integer NOT NULL, lager_id integer NOT NULL)";
+                st.executeUpdate(sql);
+                for (LagerPlatz mod : init.getLagerplatz()) {
+                    addLagerPlatz(mod);
+                }
+            } catch (SQLException e) {
+                logger.log(Level.ERROR, e);
+                e.printStackTrace();
+            } finally {
+                if (st != null) {
+                    try {
+                        st.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (con != null) {
+                    try {
+                        con.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        } else {
+            turncateTable("LAGERPLATZ");
+            for (LagerPlatz mod : init.getLagerplatz()) {
+                addLagerPlatz(mod);
+            }
+        }
+    }
+
+    @Override
+    public void addLagerPlatz(LagerPlatz model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "INSERT INTO LAGERPLATZ (id,name,kapazitaet,lager_id) VALUES (" + model.getId() + ", '"
+                    + model.getName() + "', " + model.getKapazitaet() + ", " + model.getLager_id().getId() + ")";
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void updateLagerPlatz(LagerPlatz model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "UPDATE LAGERPLATZ SET name='" + model.getName() + "', kapazitaet=" + model.getKapazitaet()
+                    + ", lager_id=" + model.getLager_id().getId() + " WHERE id=" + model.getId();
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void deleteLagerPlatz(LagerPlatz model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "DELETE FROM LAGERPLATZ WHERE id=" + model.getId();
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public List<LagerPlatz> getLagerPlatzs() {
+        List<LagerPlatz> l = new ArrayList<>();
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT * FROM LAGERPLATZ";
+            rs = st.executeQuery(sql);
+
+            while (rs.next()) {
+                int id = rs.getInt("ID");
+                String name = rs.getString("NAME");
+                int kapazitaet = rs.getInt("KAPAZITAET");
+                Lager lager_id = getLagerById(rs.getInt("LAGER_ID"));
+                l.add(new LagerPlatz(id, name, kapazitaet, lager_id));
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return l;
+    }
+
+    public LagerPlatz getLagerPlatzById(int id) {
+        LagerPlatz model = new LagerPlatz();
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT * FROM LAGERPLATZ WHERE id=" + id;
+            rs = st.executeQuery(sql);
+
+            rs.next();
+            model.setId(id);
+            String name = rs.getString("NAME");
+            int kapazitaet = rs.getInt("KAPAZITAET");
+            Lager lager_id = getLagerById(rs.getInt("LAGER_ID"));
+            model.setName(name);
+            model.setKapazitaet(kapazitaet);
+            model.setLager_id(lager_id);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return model;
+    }
+
+    @Override
+    public void initLagerBestand(List<LagerBestand> list) {
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            if (!tableExists("LAGERBESTAND")) {
+                // Tabelle erstellen, wenn sie nicht existiert
+                st = con.createStatement();
+                String sql = "CREATE TABLE IF NOT EXISTS LAGERBESTAND (id integer PRIMARY KEY, anzahl integer NOT NULL, produkt_id integer NOT NULL, lagerplatz_id integer NOT NULL)";
+                st.executeUpdate(sql);
+                // Initialdaten einfügen
+                for (LagerBestand mod : init.getLagerbestand()) {
+                    addLagerBestand(mod);
+                }
+                logger.log(Level.INFO, "LAGERBESTAND-Tabelle erstellt und mit Initialdaten gefüllt.");
+            } else {
+                // Prüfen, ob die Tabelle leer ist
+                st = con.createStatement();
+                rs = st.executeQuery("SELECT COUNT(*) AS count FROM LAGERBESTAND");
+                if (rs.next() && rs.getInt("count") == 0) {
+                    // Tabelle ist leer, Initialdaten einfügen
+                    for (LagerBestand mod : init.getLagerbestand()) {
+                        addLagerBestand(mod);
+                    }
+                    logger.log(Level.INFO, "LAGERBESTAND-Tabelle war leer, mit Initialdaten gefüllt.");
+                } else {
+                    // Tabelle enthält Daten, keine Initialisierung erforderlich
+                    logger.log(Level.INFO, "LAGERBESTAND-Tabelle enthält bereits Daten, Initialisierung übersprungen.");
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void addLagerBestand(LagerBestand model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "INSERT INTO LAGERBESTAND (id,anzahl,produkt_id,lagerplatz_id) VALUES (" + model.getId() + ", "
+                    + model.getAnzahl() + ", " + model.getProdukt_id().getId() + ", " + model.getLagerplatz_id().getId()
+                    + ")";
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void updateLagerBestand(LagerBestand model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "UPDATE LAGERBESTAND SET anzahl=" + model.getAnzahl() + ", produkt_id="
+                    + model.getProdukt_id().getId() + ", lagerplatz_id=" + model.getLagerplatz_id().getId()
+                    + " WHERE id=" + model.getId();
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void deleteLagerBestand(LagerBestand model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "DELETE FROM LAGERBESTAND WHERE id=" + model.getId();
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public List<LagerBestand> getLagerBestands() {
+        List<LagerBestand> l = new ArrayList<>();
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT * FROM LAGERBESTAND";
+            rs = st.executeQuery(sql);
+
+            while (rs.next()) {
+                int id = rs.getInt("ID");
+                int anzahl = rs.getInt("ANZAHL");
+                LagerPlatz lagerplatz_id = getLagerPlatzById(rs.getInt("LAGERPLATZ_ID"));
+                Produkt produkt_id = getProduktById(rs.getInt("PRODUKT_ID"));
+                l.add(new LagerBestand(id, anzahl, produkt_id, lagerplatz_id));
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return l;
+    }
+
+    @Override
+    public void initProdukt(List<Produkt> list) {
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            if (!tableExists("PRODUKT")) {
+                st = con.createStatement();
+                String sql = "CREATE TABLE IF NOT EXISTS PRODUKT (id integer PRIMARY KEY, name text NOT NULL, hersteller text, preis real)";
+                st.executeUpdate(sql);
+                for (Produkt mod : init.getProdukt()) {
+                    addProdukt(mod);
+                }
+            } else {
+                st = con.createStatement();
+                rs = st.executeQuery("SELECT COUNT(*) AS count FROM PRODUKT");
+                if (rs.next() && rs.getInt("count") == 0) {
+                    for (Produkt mod : init.getProdukt()) {
+                        addProdukt(mod);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void addProdukt(Produkt model) {
+        Connection con = null;
+        PreparedStatement ps = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            // Generiere neue ID
+            int newId = getNextProduktId();
+            String sql = "INSERT INTO PRODUKT (id, name, hersteller, preis) VALUES (?, ?, ?, ?)";
+            ps = con.prepareStatement(sql);
+            ps.setInt(1, newId);
+            ps.setString(2, model.getName());
+            ps.setString(3, model.getHersteller());
+            ps.setDouble(4, model.getPreis());
+            ps.executeUpdate();
+            // Setze die generierte ID im Model
+            model.setId(newId);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (ps != null) ps.close();
+                if (con != null) con.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    public int getNextProduktId() {
+        Connection con = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            String sql = "SELECT MAX(id) AS max_id FROM PRODUKT";
+            ps = con.prepareStatement(sql);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                int maxId = rs.getInt("max_id");
+                return maxId + 10; // Erhöhe um 10
+            }
+            return 10; // Start-ID, falls Tabelle leer
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+            return -1;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+                if (con != null) con.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public Produkt getProduktByModel(Produkt mod) {
+        Produkt model = new Produkt();
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT * FROM PRODUKT WHERE id=" + mod.getId();
+            rs = st.executeQuery(sql);
+
+            rs.next();
+            model.setId(mod.getId());
+            String name = rs.getString("NAME");
+            String hersteller = rs.getString("HERSTELLER");
+            double preis = rs.getDouble("PREIS");
+            model.setName(name);
+            model.setHersteller(hersteller);
+            model.setPreis(preis);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return model;
+    }
+
+    public Produkt getProduktById(int id) {
+        Produkt model = new Produkt();
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT * FROM PRODUKT WHERE id=" + id;
+            rs = st.executeQuery(sql);
+
+            rs.next();
+            model.setId(id);
+            String name = rs.getString("NAME");
+            String hersteller = rs.getString("HERSTELLER");
+            double preis = rs.getDouble("PREIS");
+            model.setName(name);
+            model.setHersteller(hersteller);
+            model.setPreis(preis);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return model;
+    }
+
+    @Override
+    public void updateProdukt(Produkt model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "UPDATE PRODUKT SET name='" + model.getName() + "', hersteller='" + model.getHersteller()
+                    + "', preis=" + model.getPreis() + " WHERE id=" + model.getId();
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void deleteProdukt(Produkt model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "DELETE FROM PRODUKT WHERE id=" + model.getId();
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public List<Produkt> getProdukts() {
+        List<Produkt> l = new ArrayList<>();
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT * FROM PRODUKT";
+            rs = st.executeQuery(sql);
+
+            while (rs.next()) {
+                int id = rs.getInt("ID");
+                String name = rs.getString("NAME");
+                String hersteller = rs.getString("HERSTELLER");
+                double preis = rs.getDouble("PREIS");
+                l.add(new Produkt(id, name, hersteller, preis));
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return l;
+    }
+
+    @Override
+    public List<DemoModel> getDemos() {
+        List<DemoModel> l = new ArrayList<DemoModel>();
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT * FROM DEMOS";
+            rs = st.executeQuery(sql);
+
+            while (rs.next()) {
+                int id = rs.getInt("ID");
+                String name = rs.getString("NAME");
+                l.add(new DemoModel(id, name));
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return l;
+    }
+
+    @Override
+    public void initDemo(List<DemoModel> list) {
+        if (!tableExists("DEMOS")) {
+            Connection con = null;
+            Statement st = null;
+            try {
+                con = DriverManager.getConnection(dbUrl);
+                st = con.createStatement();
+                String sql = "CREATE TABLE IF NOT EXISTS DEMOS (id integer PRIMARY KEY, name text NOT NULL)";
+                st.executeUpdate(sql);
+                for (DemoModel mod : init.getDemo()) {
+                    addDemo(mod);
+                }
+            } catch (SQLException e) {
+                logger.log(Level.ERROR, e);
+                e.printStackTrace();
+            } finally {
+                if (st != null) {
+                    try {
+                        st.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (con != null) {
+                    try {
+                        con.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        } else {
+            turncateTable("DEMOS");
+            for (DemoModel mod : init.getDemo()) {
+                addDemo(mod);
+            }
+        }
+    }
+
+    @Override
+    public void addDemo(DemoModel model) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "INSERT INTO DEMOS (id,name) VALUES (" + model.getId() + ", '" + model.getName() + "')";
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+  //NEu
+    @Override
+    public void initKunde(List<Kunde> list) {
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            // Migration durchführen, falls nötig
+            migrateKundeTable();
+            if (!tableExists("KUNDE")) {
+                st = con.createStatement();
+                String sql = "CREATE TABLE IF NOT EXISTS KUNDE (id integer PRIMARY KEY, vorname text NOT NULL, nachname text NOT NULL, lieferadresse text NOT NULL, rechnungsadresse text NOT NULL)";
+                st.executeUpdate(sql);
+                List<Kunde> initialKunden = (list != null && !list.isEmpty()) ? list : init.getKunden();
+                for (Kunde mod : initialKunden) {
+                    addKunde(mod);
+                }
+            } else {
+                st = con.createStatement();
+                rs = st.executeQuery("SELECT COUNT(*) AS count FROM KUNDE");
+                if (rs.next() && rs.getInt("count") == 0) {
+                    List<Kunde> initialKunden = (list != null && !list.isEmpty()) ? list : init.getKunden();
+                    for (Kunde mod : initialKunden) {
+                        addKunde(mod);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+//Neu 
+    @Override
+    public void addKunde(Kunde model) {
+        Connection con = null;
+        PreparedStatement ps = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            String sql = "INSERT INTO KUNDE (id, vorname, nachname, lieferadresse, rechnungsadresse) VALUES (?, ?, ?, ?, ?)";
+            ps = con.prepareStatement(sql);
+            ps.setInt(1, model.getId());
+            ps.setString(2, model.getVorname());
+            ps.setString(3, model.getNachname());
+            ps.setString(4, model.getLieferadresse());
+            ps.setString(5, model.getRechnungsadresse());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void updateKunde(Kunde model) {
+        Connection con = null;
+        PreparedStatement ps = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            String sql = "UPDATE KUNDE SET vorname = ?, nachname = ?, lieferadresse = ?, rechnungsadresse = ? WHERE id = ?";
+            ps = con.prepareStatement(sql);
+            ps.setString(1, model.getVorname());
+            ps.setString(2, model.getNachname());
+            ps.setString(3, model.getLieferadresse());
+            ps.setString(4, model.getRechnungsadresse());
+            ps.setInt(5, model.getId());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public synchronized void reassignKundeIds(int deletedId) {
+        Connection con = null;
+        PreparedStatement psKunde = null;
+        PreparedStatement psBestellung = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            con.setAutoCommit(false);
+
+            String sqlKunde = "UPDATE KUNDE SET id = id - 1 WHERE id > ?";
+            psKunde = con.prepareStatement(sqlKunde);
+            psKunde.setInt(1, deletedId);
+            int kundeRows = psKunde.executeUpdate();
+            logger.log(Level.INFO, "Updated " + kundeRows + " Kunde IDs after deleting ID " + deletedId);
+
+            String sqlBestellung = "UPDATE BESTELLUNG SET kunde_id = kunde_id - 1 WHERE kunde_id > ?";
+            psBestellung = con.prepareStatement(sqlBestellung);
+            psBestellung.setInt(1, deletedId);
+            int bestellungRows = psBestellung.executeUpdate();
+            logger.log(Level.INFO, "Updated " + bestellungRows + " Bestellung kunde_id values after deleting ID " + deletedId);
+
+            con.commit();
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, "Failed to reassign Kunde IDs: " + e.getMessage());
+            if (con != null) {
+                try {
+                    con.rollback();
+                    logger.log(Level.INFO, "Rolled back transaction for reassignKundeIds");
+                } catch (SQLException ex) {
+                    logger.log(Level.ERROR, "Rollback failed: " + ex.getMessage());
+                }
+            }
+            throw new RuntimeException("Failed to reassign Kunde IDs", e);
+        } finally {
+            // Schließen von Ressourcen
+            if (psKunde != null) {
+                try {
+                    psKunde.close();
+                } catch (SQLException e) {
+                    logger.log(Level.ERROR, e.getMessage());
+                }
+            }
+            if (psBestellung != null) {
+                try {
+                    psBestellung.close();
+                } catch (SQLException e) {
+                    logger.log(Level.ERROR, e.getMessage());
+                }
+            }
+            if (con != null) {
+                try {
+                    con.setAutoCommit(true);
+                    con.close();
+                } catch (SQLException e) {
+                    logger.log(Level.ERROR, e.getMessage());
+                }
+            }
+        }
+    }
+
+    @Override
+    public synchronized void deleteKunde(Kunde model) {
+        Connection con = null;
+        PreparedStatement psBestellungProdukt = null;
+        PreparedStatement psBestellung = null;
+        PreparedStatement psKunde = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            con.setAutoCommit(false);
+
+            String sqlBestellungProdukt = "DELETE FROM BESTELLUNG_PRODUKT WHERE bestellung_id IN (SELECT id FROM BESTELLUNG WHERE kunde_id = ?)";
+            psBestellungProdukt = con.prepareStatement(sqlBestellungProdukt);
+            psBestellungProdukt.setInt(1, model.getId());
+            psBestellungProdukt.executeUpdate();
+
+            String sqlBestellung = "DELETE FROM BESTELLUNG WHERE kunde_id = ?";
+            psBestellung = con.prepareStatement(sqlBestellung);
+            psBestellung.setInt(1, model.getId());
+            psBestellung.executeUpdate();
+
+            String sqlKunde = "DELETE FROM KUNDE WHERE id = ?";
+            psKunde = con.prepareStatement(sqlKunde);
+            psKunde.setInt(1, model.getId());
+            int rows = psKunde.executeUpdate();
+            if (rows == 0) {
+                throw new SQLException("No Kunde found with ID " + model.getId());
+            }
+
+            con.commit();
+            logger.log(Level.INFO, "Deleted Kunde ID " + model.getId());
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, "Failed to delete Kunde ID " + model.getId() + ": " + e.getMessage());
+            if (con != null) {
+                try {
+                    con.rollback();
+                    logger.log(Level.INFO, "Rolled back deletion of Kunde ID " + model.getId());
+                } catch (SQLException ex) {
+                    logger.log(Level.ERROR, "Rollback failed: " + ex.getMessage());
+                }
+            }
+            throw new RuntimeException("Failed to delete Kunde", e);
+        } finally {
+            if (psBestellungProdukt != null) {
+                try {
+                    psBestellungProdukt.close();
+                } catch (SQLException e) {
+                    logger.log(Level.ERROR, e.getMessage());
+                }
+            }
+            if (psBestellung != null) {
+                try {
+                    psBestellung.close();
+                } catch (SQLException e) {
+                    logger.log(Level.ERROR, e.getMessage());
+                }
+            }
+            if (psKunde != null) {
+                try {
+                    psKunde.close();
+                } catch (SQLException e) {
+                    logger.log(Level.ERROR, e.getMessage());
+                }
+            }
+            if (con != null) {
+                try {
+                    con.setAutoCommit(true);
+                    con.close();
+                } catch (SQLException e) {
+                    logger.log(Level.ERROR, e.getMessage());
+                }
+            }
+        }
+    }
+
+    @Override
+    public List<Kunde> getKunden() {
+        List<Kunde> l = new ArrayList<>();
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT * FROM KUNDE";
+            rs = st.executeQuery(sql);
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String vorname = rs.getString("vorname");
+                String nachname = rs.getString("nachname");
+                String lieferadresse = rs.getString("lieferadresse");
+                String rechnungsadresse = rs.getString("rechnungsadresse");
+                l.add(new Kunde(id, vorname, nachname, lieferadresse, rechnungsadresse));
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return l;
+    }
+
+    @Override
+    public Kunde getKundeById(int id) {
+        Kunde model = null;
+        Connection con = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            String sql = "SELECT * FROM KUNDE WHERE id = ?";
+            ps = con.prepareStatement(sql);
+            ps.setInt(1, id);
+            rs = ps.executeQuery();
+
+            if (rs.next()) {
+                model = new Kunde();
+                model.setId(rs.getInt("id"));
+                model.setVorname(rs.getString("vorname"));
+                model.setNachname(rs.getString("nachname"));
+                model.setLieferadresse(rs.getString("lieferadresse"));
+                model.setRechnungsadresse(rs.getString("rechnungsadresse"));
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return model;
+    }
+
+    @Override
+    public int getNextKundeId() {
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        int nextId = -1;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "SELECT MAX(id) AS max_id FROM KUNDE";
+            rs = st.executeQuery(sql);
+            if (rs.next()) {
+                nextId = rs.getInt("max_id") + 1;
+            } else {
+                nextId = 1; // Falls die Tabelle leer ist
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+            return -1;
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return nextId;
+    }
+
+    @Override
+    public void initBestellung(List<Bestellung> list) {
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            // Spalte datum hinzufügen, falls nötig
+            addDatumColumn();
+            if (!tableExists("BESTELLUNG")) {
+                st = con.createStatement();
+                String sql = "CREATE TABLE IF NOT EXISTS BESTELLUNG (id INTEGER PRIMARY KEY AUTOINCREMENT, kunde_id integer NOT NULL, datum integer NOT NULL, erfassung integer, versand integer, status text)";
+                st.executeUpdate(sql);
+                sql = "CREATE TABLE IF NOT EXISTS BESTELLUNG_PRODUKT (bestellung_id integer NOT NULL, produkt_id integer NOT NULL, anzahl integer NOT NULL)";
+                st.executeUpdate(sql);
+                // Initialdaten einfügen, falls vorhanden
+                if (list != null && !list.isEmpty()) {
+                    for (Bestellung mod : list) {
+                        addBestellung(mod);
+                    }
+                }
+            } else {
+                // Tabellenstruktur aktualisieren (z. B. neue Spalten hinzufügen)
+                addTimestampColumns();
+                // Prüfen, ob die Tabelle leer ist
+                st = con.createStatement();
+                rs = st.executeQuery("SELECT COUNT(*) AS count FROM BESTELLUNG");
+                if (rs.next() && rs.getInt("count") == 0 && list != null && !list.isEmpty()) {
+                    // Nur wenn die Tabelle leer ist und Initialdaten vorhanden sind, diese einfügen
+                    for (Bestellung mod : list) {
+                        addBestellung(mod);
+                    }
+                }
+                // Bestehende Bestellungen werden nicht gelöscht
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void addBestellung(Bestellung model) {
+    	if (model.getDatum() == null) {
+            model.setDatum(new Date());
+            System.err.println("Datum war null, auf aktuelles Datum gesetzt");
+        }
+        Connection con = null;
+        PreparedStatement psBestellung = null;
+        PreparedStatement psProdukt = null;
+        ResultSet generatedKeys = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            con.setAutoCommit(false);
+
+            // Bestellung einfügen
+            String sqlBestellung = "INSERT INTO BESTELLUNG (kunde_id, datum, erfassung, versand, status) VALUES (?, ?, ?, ?, ?)";
+            psBestellung = con.prepareStatement(sqlBestellung, Statement.RETURN_GENERATED_KEYS);
+            psBestellung.setInt(1, model.getKunde().getId());
+            psBestellung.setLong(2, model.getDatum() != null ? model.getDatum().getTime() : new Date().getTime()); // Datum setzen
+            psBestellung.setLong(3, model.getErfassung() != null ? model.getErfassung().getTime() : 0);
+            psBestellung.setLong(4, model.getVersand() != null ? model.getVersand().getTime() : 0);
+            psBestellung.setString(5, model.getStatus());
+            psBestellung.executeUpdate();
+
+            // Generierte ID abrufen
+            generatedKeys = psBestellung.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                int generatedId = generatedKeys.getInt(1);
+                model.setId(generatedId); // ID an das Model übergeben
+                logger.log(Level.INFO, "Neue Bestellung mit ID " + generatedId + " erstellt");
+            } else {
+                throw new SQLException("Keine ID generiert für die Bestellung");
+            }
+
+            // Bestellung_Produkt-Einträge einfügen
+            String sqlProdukt = "INSERT INTO BESTELLUNG_PRODUKT (bestellung_id, produkt_id, anzahl) VALUES (?, ?, ?)";
+            psProdukt = con.prepareStatement(sqlProdukt);
+            for (BestellungProdukt bp : model.getProdukte()) {
+                psProdukt.setInt(1, model.getId());
+                psProdukt.setInt(2, bp.getProdukt().getId());
+                psProdukt.setInt(3, bp.getAnzahl());
+                psProdukt.executeUpdate();
+
+                // Lagerbestand verringern
+                String sqlUpdateBestand = "UPDATE LAGERBESTAND SET anzahl = anzahl - ? WHERE produkt_id = ? AND anzahl >= ?";
+                PreparedStatement psUpdateBestand = con.prepareStatement(sqlUpdateBestand);
+                psUpdateBestand.setInt(1, bp.getAnzahl());
+                psUpdateBestand.setInt(2, bp.getProdukt().getId());
+                psUpdateBestand.setInt(3, bp.getAnzahl());
+                int rowsAffected = psUpdateBestand.executeUpdate();
+                psUpdateBestand.close();
+
+                if (rowsAffected == 0) {
+                    throw new SQLException("Nicht genügend Lagerbestand für Produkt ID " + bp.getProdukt().getId());
+                }
+            }
+
+            con.commit();
+        } catch (SQLException e) {
+            if (con != null) {
+                try {
+                    con.rollback();
+                    logger.log(Level.ERROR, "Transaktion für Bestellung fehlgeschlagen, Rollback ausgeführt: " + e.getMessage());
+                } catch (SQLException ex) {
+                    logger.log(Level.ERROR, ex);
+                    ex.printStackTrace();
+                }
+            }
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (generatedKeys != null) {
+                try {
+                    generatedKeys.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psBestellung != null) {
+                try {
+                    psBestellung.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psProdukt != null) {
+                try {
+                    psProdukt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.setAutoCommit(true);
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        System.out.println("addBestellung: datum=" + (model.getDatum() != null ? model.getDatum().toString() : "null"));
+    }
+    private void addDatumColumn() {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            if (!columnExists("BESTELLUNG", "datum")) {
+                st = con.createStatement();
+                st.executeUpdate("ALTER TABLE BESTELLUNG ADD COLUMN datum INTEGER NOT NULL DEFAULT 0");
+                // Optional: Bestehende Einträge aktualisieren
+                st.executeUpdate("UPDATE BESTELLUNG SET datum = erfassung WHERE datum = 0 AND erfassung IS NOT NULL");
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void updateBestellung(Bestellung model) {
+        Connection con = null;
+        PreparedStatement psBestellung = null;
+        PreparedStatement psDeleteProdukt = null;
+        PreparedStatement psInsertProdukt = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            con.setAutoCommit(false);
+
+            // Bestellung aktualisieren
+            String sqlBestellung = "UPDATE BESTELLUNG SET kunde_id = ?, datum = ?, erfassung = ?, versand = ?, status = ? WHERE id = ?";
+            psBestellung = con.prepareStatement(sqlBestellung);
+            psBestellung.setInt(1, model.getKunde().getId());
+            psBestellung.setLong(2, model.getDatum() != null ? model.getDatum().getTime() : new Date().getTime());
+            psBestellung.setLong(3, model.getErfassung() != null ? model.getErfassung().getTime() : 0);
+            psBestellung.setLong(4, model.getVersand() != null ? model.getVersand().getTime() : 0);
+            psBestellung.setString(5, model.getStatus());
+            psBestellung.setInt(6, model.getId());
+            psBestellung.executeUpdate();
+
+            // Alte Bestellung_Produkt-Einträge löschen
+            String sqlDeleteProdukt = "DELETE FROM BESTELLUNG_PRODUKT WHERE bestellung_id = ?";
+            psDeleteProdukt = con.prepareStatement(sqlDeleteProdukt);
+            psDeleteProdukt.setInt(1, model.getId());
+            psDeleteProdukt.executeUpdate();
+
+            // Neue Bestellung_Produkt-Einträge einfügen
+            String sqlInsertProdukt = "INSERT INTO BESTELLUNG_PRODUKT (bestellung_id, produkt_id, anzahl) VALUES (?, ?, ?)";
+            psInsertProdukt = con.prepareStatement(sqlInsertProdukt);
+            for (BestellungProdukt bp : model.getProdukte()) {
+                psInsertProdukt.setInt(1, model.getId());
+                psInsertProdukt.setInt(2, bp.getProdukt().getId());
+                psInsertProdukt.setInt(3, bp.getAnzahl());
+                psInsertProdukt.executeUpdate();
+            }
+
+            con.commit();
+        } catch (SQLException e) {
+            if (con != null) {
+                try {
+                    con.rollback();
+                } catch (SQLException ex) {
+                    logger.log(Level.ERROR, ex);
+                    ex.printStackTrace();
+                }
+            }
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (psBestellung != null) {
+                try {
+                    psBestellung.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psDeleteProdukt != null) {
+                try {
+                    psDeleteProdukt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psInsertProdukt != null) {
+                try {
+                    psInsertProdukt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.setAutoCommit(true);
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void deleteBestellung(Bestellung model) {
+        Connection con = null;
+        PreparedStatement psProdukt = null;
+        PreparedStatement psBestellung = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            con.setAutoCommit(false);
+
+            // Bestellung_Produkt-Einträge löschen
+            String sqlProdukt = "DELETE FROM BESTELLUNG_PRODUKT WHERE bestellung_id = ?";
+            psProdukt = con.prepareStatement(sqlProdukt);
+            psProdukt.setInt(1, model.getId());
+            psProdukt.executeUpdate();
+
+            // Bestellung löschen
+            String sqlBestellung = "DELETE FROM BESTELLUNG WHERE id = ?";
+            psBestellung = con.prepareStatement(sqlBestellung);
+            psBestellung.setInt(1, model.getId());
+            psBestellung.executeUpdate();
+
+            con.commit();
+        } catch (SQLException e) {
+            if (con != null) {
+                try {
+                    con.rollback();
+                } catch (SQLException ex) {
+                    logger.log(Level.ERROR, ex);
+                    ex.printStackTrace();
+                }
+            }
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (psProdukt != null) {
+                try {
+                    psProdukt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psBestellung != null) {
+                try {
+                    psBestellung.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.setAutoCommit(true);
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public List<Bestellung> getBestellungen() {
+        List<Bestellung> l = new ArrayList<>();
+        Connection con = null;
+        PreparedStatement psBestellung = null;
+        PreparedStatement psProdukt = null;
+        ResultSet rsBestellung = null;
+        ResultSet rsProdukt = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            String sqlBestellung = "SELECT * FROM BESTELLUNG";
+            psBestellung = con.prepareStatement(sqlBestellung);
+            rsBestellung = psBestellung.executeQuery();
+
+            String sqlProdukt = "SELECT * FROM BESTELLUNG_PRODUKT WHERE bestellung_id = ?";
+            psProdukt = con.prepareStatement(sqlProdukt);
+
+            while (rsBestellung.next()) {
+                int id = rsBestellung.getInt("id");
+                int kundeId = rsBestellung.getInt("kunde_id");
+                long datumTime = rsBestellung.getLong("datum");
+                long erfassungTime = rsBestellung.getLong("erfassung");
+                long versandTime = rsBestellung.getLong("versand");
+                String status = rsBestellung.getString("status");
+
+                Kunde kunde = getKundeById(kundeId);
+                Bestellung bestellung = new Bestellung();
+                bestellung.setId(id);
+                bestellung.setKunde(kunde);
+                bestellung.setDatum(datumTime > 0 ? new Date(datumTime) : null);
+                bestellung.setErfassung(erfassungTime > 0 ? new Date(erfassungTime) : null);
+                bestellung.setVersand(versandTime > 0 ? new Date(versandTime) : null);
+                bestellung.setStatus(status);
+
+                // Produkte der Bestellung abrufen
+                psProdukt.setInt(1, id);
+                rsProdukt = psProdukt.executeQuery();
+                List<BestellungProdukt> produkte = new ArrayList<>();
+                while (rsProdukt.next()) {
+                    int produktId = rsProdukt.getInt("produkt_id");
+                    int anzahl = rsProdukt.getInt("anzahl");
+                    Produkt produkt = getProduktById(produktId);
+                    produkte.add(new BestellungProdukt(produkt, anzahl));
+                }
+                bestellung.setProdukte(produkte);
+
+                l.add(bestellung);
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rsProdukt != null) {
+                try {
+                    rsProdukt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psProdukt != null) {
+                try {
+                    psProdukt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (rsBestellung != null) {
+                try {
+                    rsBestellung.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psBestellung != null) {
+                try {
+                    psBestellung.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return l;
+    }
+    public List<Bestellung> getFilteredBestellungen(Date startDate, Date endDate, Double minAmount, Integer productId) {
+        List<Bestellung> result = new ArrayList<>();
+        Connection con = null;
+        PreparedStatement psBestellung = null;
+        PreparedStatement psProdukt = null;
+        ResultSet rsBestellung = null;
+        ResultSet rsProdukt = null;
+
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            StringBuilder sql = new StringBuilder("SELECT DISTINCT b.* FROM BESTELLUNG b");
+            List<String> conditions = new ArrayList<>();
+            List<Object> params = new ArrayList<>();
+
+            // Joins für Produktfilter und Gesamtbetrag
+            if (productId != null) {
+                sql.append(" JOIN BESTELLUNG_PRODUKT bp ON b.id = bp.bestellung_id");
+                conditions.add("bp.produkt_id = ?");
+                params.add(productId);
+            }
+            if (minAmount != null) {
+                sql.append(" JOIN BESTELLUNG_PRODUKT bp2 ON b.id = bp2.bestellung_id");
+                sql.append(" JOIN PRODUKT p ON bp2.produkt_id = p.id");
+            }
+
+            // Zeitraumfilter
+            if (startDate != null) {
+                conditions.add("b.datum >= ?");
+                params.add(startDate.getTime());
+            }
+            if (endDate != null) {
+                conditions.add("b.datum <= ?");
+                params.add(endDate.getTime());
+            }
+
+            // Gesamtbetragsfilter
+            if (minAmount != null) {
+                conditions.add("b.id IN (SELECT b2.id FROM BESTELLUNG b2 " +
+                        "JOIN BESTELLUNG_PRODUKT bp3 ON b2.id = bp3.bestellung_id " +
+                        "JOIN PRODUKT p2 ON bp3.produkt_id = p2.id " +
+                        "GROUP BY b2.id HAVING SUM(bp3.anzahl * p2.preis) >= ?)");
+                params.add(minAmount);
+            }
+
+            // Bedingungen hinzufügen
+            if (!conditions.isEmpty()) {
+                sql.append(" WHERE ").append(String.join(" AND ", conditions));
+            }
+
+            psBestellung = con.prepareStatement(sql.toString());
+            for (int i = 0; i < params.size(); i++) {
+                psBestellung.setObject(i + 1, params.get(i));
+            }
+
+            rsBestellung = psBestellung.executeQuery();
+            String sqlProdukt = "SELECT * FROM BESTELLUNG_PRODUKT WHERE bestellung_id = ?";
+            psProdukt = con.prepareStatement(sqlProdukt);
+
+            while (rsBestellung.next()) {
+                Bestellung bestellung = new Bestellung();
+                bestellung.setId(rsBestellung.getInt("id"));
+                bestellung.setKunde(getKundeById(rsBestellung.getInt("kunde_id")));
+                long datumTime = rsBestellung.getLong("datum");
+                bestellung.setDatum(datumTime > 0 ? new Date(datumTime) : null);
+                long erfassungTime = rsBestellung.getLong("erfassung");
+                bestellung.setErfassung(erfassungTime > 0 ? new Date(erfassungTime) : null);
+                long versandTime = rsBestellung.getLong("versand");
+                bestellung.setVersand(versandTime > 0 ? new Date(versandTime) : null);
+                bestellung.setStatus(rsBestellung.getString("status"));
+
+                // Produkte laden
+                psProdukt.setInt(1, bestellung.getId());
+                rsProdukt = psProdukt.executeQuery();
+                List<BestellungProdukt> produkte = new ArrayList<>();
+                while (rsProdukt.next()) {
+                    Produkt produkt = getProduktById(rsProdukt.getInt("produkt_id"));
+                    int anzahl = rsProdukt.getInt("anzahl");
+                    produkte.add(new BestellungProdukt(produkt, anzahl));
+                }
+                bestellung.setProdukte(produkte);
+                result.add(bestellung);
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, "Fehler beim Abrufen gefilterter Bestellungen: " + e.getMessage(), e);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (rsProdukt != null) rsProdukt.close();
+                if (rsBestellung != null) rsBestellung.close();
+                if (psProdukt != null) psProdukt.close();
+                if (psBestellung != null) psBestellung.close();
+                if (con != null) con.close();
+            } catch (SQLException e) {
+                logger.log(Level.WARNING, "Fehler beim Schließen der Datenbankressourcen: " + e.getMessage(), e);
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+    @Override
+    public List<Bestellung> getBestellungenByKundeId(int kundeId) {
+        List<Bestellung> l = new ArrayList<>();
+        Connection con = null;
+        PreparedStatement psBestellung = null;
+        PreparedStatement psProdukt = null;
+        ResultSet rsBestellung = null;
+        ResultSet rsProdukt = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            String sqlBestellung = "SELECT * FROM BESTELLUNG WHERE kunde_id = ?";
+            psBestellung = con.prepareStatement(sqlBestellung);
+            psBestellung.setInt(1, kundeId);
+            rsBestellung = psBestellung.executeQuery();
+
+            String sqlProdukt = "SELECT * FROM BESTELLUNG_PRODUKT WHERE bestellung_id = ?";
+            psProdukt = con.prepareStatement(sqlProdukt);
+
+            while (rsBestellung.next()) {
+                int id = rsBestellung.getInt("id");
+                long erfassungTime = rsBestellung.getLong("erfassung");
+                long versandTime = rsBestellung.getLong("versand");
+                String status = rsBestellung.getString("status");
+
+                Kunde kunde = getKundeById(kundeId);
+                Bestellung bestellung = new Bestellung();
+                bestellung.setId(id);
+                bestellung.setKunde(kunde);
+                bestellung.setErfassung(erfassungTime > 0 ? new Date(erfassungTime) : null);
+                bestellung.setVersand(versandTime > 0 ? new Date(versandTime) : null);
+                bestellung.setStatus(status);
+                bestellung.setDatum(erfassungTime > 0 ? new Date(erfassungTime) : null); // Synchronisiere datum mit erfassung
+
+                // Produkte der Bestellung abrufen
+                psProdukt.setInt(1, id);
+                rsProdukt = psProdukt.executeQuery();
+                List<BestellungProdukt> produkte = new ArrayList<>();
+                while (rsProdukt.next()) {
+                    int produktId = rsProdukt.getInt("produkt_id");
+                    int anzahl = rsProdukt.getInt("anzahl");
+                    Produkt produkt = getProduktById(produktId);
+                    produkte.add(new BestellungProdukt(produkt, anzahl));
+                }
+                bestellung.setProdukte(produkte);
+
+                l.add(bestellung);
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rsProdukt != null) {
+                try {
+                    rsProdukt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psProdukt != null) {
+                try {
+                    psProdukt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (rsBestellung != null) {
+                try {
+                    rsBestellung.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psBestellung != null) {
+                try {
+                    psBestellung.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return l;
+    }
+
+    public Bestellung getBestellungById(int id) {
+        Bestellung bestellung = null;
+        Connection con = null;
+        PreparedStatement psBestellung = null;
+        PreparedStatement psProdukt = null;
+        ResultSet rsBestellung = null;
+        ResultSet rsProdukt = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            String sqlBestellung = "SELECT * FROM BESTELLUNG WHERE id = ?";
+            psBestellung = con.prepareStatement(sqlBestellung);
+            psBestellung.setInt(1, id);
+            rsBestellung = psBestellung.executeQuery();
+
+            if (rsBestellung.next()) {
+                int kundeId = rsBestellung.getInt("kunde_id");
+                long erfassungTime = rsBestellung.getLong("erfassung");
+                long versandTime = rsBestellung.getLong("versand");
+                String status = rsBestellung.getString("status");
+
+                Kunde kunde = getKundeById(kundeId);
+                bestellung = new Bestellung();
+                bestellung.setId(id);
+                bestellung.setKunde(kunde);
+                bestellung.setErfassung(erfassungTime > 0 ? new Date(erfassungTime) : null);
+                bestellung.setVersand(versandTime > 0 ? new Date(versandTime) : null);
+                bestellung.setStatus(status);
+                bestellung.setDatum(erfassungTime > 0 ? new Date(erfassungTime) : null); // Synchronisiere datum mit erfassung
+
+                // Produkte der Bestellung abrufen
+                String sqlProdukt = "SELECT * FROM BESTELLUNG_PRODUKT WHERE bestellung_id = ?";
+                psProdukt = con.prepareStatement(sqlProdukt);
+                psProdukt.setInt(1, id);
+                rsProdukt = psProdukt.executeQuery();
+                List<BestellungProdukt> produkte = new ArrayList<>();
+                while (rsProdukt.next()) {
+                    int produktId = rsProdukt.getInt("produkt_id");
+                    int anzahl = rsProdukt.getInt("anzahl");
+                    Produkt produkt = getProduktById(produktId);
+                    produkte.add(new BestellungProdukt(produkt, anzahl));
+                }
+                bestellung.setProdukte(produkte);
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rsProdukt != null) {
+                try {
+                    rsProdukt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psProdukt != null) {
+                try {
+                    psProdukt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (rsBestellung != null) {
+                try {
+                    rsBestellung.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (psBestellung != null) {
+                try {
+                    psBestellung.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return bestellung;
+    }
+  //Neu
+    private boolean columnExists(String tableName, String columnName) {
+        Connection con = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            DatabaseMetaData meta = con.getMetaData();
+            rs = meta.getColumns(null, null, tableName, columnName);
+            return rs.next();
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+//Neu
+    private void addTimestampColumns() {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            if (!columnExists("BESTELLUNG", "erfassung")) {
+                st.executeUpdate("ALTER TABLE BESTELLUNG ADD COLUMN erfassung INTEGER");
+            }
+            if (!columnExists("BESTELLUNG", "versand")) {
+                st.executeUpdate("ALTER TABLE BESTELLUNG ADD COLUMN versand INTEGER");
+            }
+            if (!columnExists("BESTELLUNG", "status")) {
+                st.executeUpdate("ALTER TABLE BESTELLUNG ADD COLUMN status TEXT");
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+//Neu
+    private void migrateKundeTable() {
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            // Prüfe, ob die alte Tabelle mit dem 'name'-Feld existiert
+            if (tableExists("KUNDE") && columnExists("KUNDE", "name") && !columnExists("KUNDE", "vorname")) {
+                con.setAutoCommit(false);
+                st = con.createStatement();
+                // Erstelle neue Tabelle
+                String sql = "CREATE TABLE KUNDE_NEW (id integer PRIMARY KEY, vorname text NOT NULL, nachname text NOT NULL, lieferadresse text NOT NULL, rechnungsadresse text NOT NULL)";
+                st.executeUpdate(sql);
+
+                // Kopiere und teile Daten
+                PreparedStatement insertStmt = con.prepareStatement(
+                        "INSERT INTO KUNDE_NEW (id, vorname, nachname, lieferadresse, rechnungsadresse) VALUES (?, ?, ?, ?, ?)");
+                rs = st.executeQuery("SELECT id, name, lieferadresse, rechnungsadresse FROM KUNDE");
+                while (rs.next()) {
+                    int id = rs.getInt("id");
+                    String name = rs.getString("name");
+                    String lieferadresse = rs.getString("lieferadresse");
+                    String rechnungsadresse = rs.getString("rechnungsadresse");
+                    String vorname = "";
+                    String nachname = name != null ? name : "";
+                    if (name != null && name.contains(" ")) {
+                        int lastSpace = name.lastIndexOf(" ");
+                        vorname = name.substring(0, lastSpace);
+                        nachname = name.substring(lastSpace + 1);
+                    }
+                    insertStmt.setInt(1, id);
+                    insertStmt.setString(2, vorname);
+                    insertStmt.setString(3, nachname);
+                    insertStmt.setString(4, lieferadresse);
+                    insertStmt.setString(5, rechnungsadresse);
+                    insertStmt.executeUpdate();
+                }
+                insertStmt.close();
+
+                // Lösche alte Tabelle und benenne neue Tabelle um
+                st.executeUpdate("DROP TABLE KUNDE");
+                st.executeUpdate("ALTER TABLE KUNDE_NEW RENAME TO KUNDE");
+                con.commit();
+            }
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, "Fehler bei der Migration der KUNDE-Tabelle: " + e.getMessage());
+            if (con != null) {
+                try {
+                    con.rollback();
+                } catch (SQLException ex) {
+                    logger.log(Level.ERROR, ex);
+                    ex.printStackTrace();
+                }
+            }
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.setAutoCommit(true);
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+    private void turncateTable(String tableName) {
+        Connection con = null;
+        Statement st = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            st = con.createStatement();
+            String sql = "DELETE FROM " + tableName;
+            st.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (st != null) {
+                try {
+                    st.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private boolean tableExists(String tableName) {
+        Connection con = null;
+        ResultSet rs = null;
+        DatabaseMetaData md = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            md = con.getMetaData();
+            rs = md.getTables(null, null, tableName, null);
+            rs.next();
+            return rs.getRow() > 0;
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, e);
+            e.printStackTrace();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return false;
+    }
+}

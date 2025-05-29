@@ -1,0 +1,62 @@
+package thw.edu.javaII.port.warehouse.ui.model;
+
+import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+import thw.edu.javaII.port.warehouse.model.Reorder;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import javax.swing.table.AbstractTableModel;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ReorderTableModel extends AbstractTableModel {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 4417741282594152502L;
+	private final String[] columnNames = {"ID", "Produkt", "Lagerplatz", "Menge", "Bestelldatum", "Status"};
+    private final List<Reorder> reorders = new ArrayList<>();
+    private final Session session;
+
+    public ReorderTableModel(Session session) {
+        this.session = session;
+    }
+
+    public void setReorders(List<Reorder> reorders) {
+        this.reorders.clear();
+        this.reorders.addAll(reorders);
+        fireTableDataChanged();
+    }
+
+    @Override
+    public int getRowCount() {
+        return reorders.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return columnNames.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return columnNames[column];
+    }
+
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        Reorder reorder = reorders.get(rowIndex);
+        switch (columnIndex) {
+            case 0: return reorder.getId();
+            case 1: 
+                Produkt produkt = session.getCommunicator().getProduktById(reorder.getProduktId());
+                return produkt != null ? produkt.getName() : "Unbekannt";
+            case 2:
+                LagerPlatz platz = session.getCommunicator().getLagerPlatzById(reorder.getLagerPlatzId());
+                return platz != null ? platz.getName() : "Unbekannt";
+            case 3: return reorder.getMenge();
+            case 4: return new java.util.Date(reorder.getBestellDatum()).toString();
+            case 5: return reorder.getStatus();
+            default: return null;
+        }
+    }
+}

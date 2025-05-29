@@ -1,0 +1,431 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import thw.edu.javaII.port.warehouse.model.Bestellung;
+import thw.edu.javaII.port.warehouse.model.BestellungProdukt;
+import thw.edu.javaII.port.warehouse.model.Kunde;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+import thw.edu.javaII.port.warehouse.ui.LagerUIHandler;
+import thw.edu.javaII.port.warehouse.ui.MenuActionCommands;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+public class AddBestellung extends JDialog {
+    private static final long serialVersionUID = 1821938L;
+    private Session ses;
+    private DefaultTableModel tableModel;
+    private List<BestellungProdukt> produkteList = new ArrayList<>();
+    private JComboBox<Kunde> cbKunde;
+    private JTable table;
+    private JLabel totalLabel;
+    private boolean canceled = false;
+    private JFrame parentFrame;
+    private JPanel contentPane;
+
+    public AddBestellung(Frame parent, Session session, JPanel contentPane) {
+        super(parent, "Bestellung hinzufügen", true);
+        this.ses = session;
+        this.parentFrame = (JFrame) parent;
+        this.contentPane = contentPane;
+        setSize(600, 400);
+        setLocationRelativeTo(parent);
+        setLayout(new BorderLayout());
+
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                canceled = true;
+                navigateToBestellungPage();
+            }
+        });
+
+        initializeUI();
+        if (!showCustomerQueryDialog()) {
+            navigateToBestellungPage();
+        }
+    }
+
+    private void initializeUI() {
+        DecimalFormat df = new DecimalFormat("#,##0.00");
+
+        cbKunde = new JComboBox<>();
+        updateCustomerComboBox();
+
+        JComboBox<Produkt> cbProdukt = new JComboBox<>();
+        try {
+            List<Produkt> produkte = ses.getCommunicator().getProdukte();
+            if (produkte == null || produkte.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Keine Produkte gefunden!", "Fehler: Produkte laden", JOptionPane.ERROR_MESSAGE);
+            } else {
+                for (Produkt produkt : produkte) {
+                    cbProdukt.addItem(produkt);
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Fehler beim Laden der Produkte: " + e.getMessage(),
+                    "Fehler: Produkte laden", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+
+        JTextField txtAnzahl = new JTextField(5);
+        JButton btnAddProdukt = new JButton("Produkt hinzufügen");
+        JButton btnRemoveProdukt = new JButton("Produkt entfernen");
+        JButton btnChangeQuantity = new JButton("Menge ändern");
+        JButton btnSubmit = new JButton("Bestellung abschicken");
+
+        String[] columns = {"Hersteller", "Produktname", "Anzahl", "Einzelpreis", "Gesamtpreis"};
+        tableModel = new DefaultTableModel(columns, 0) {
+            /**
+			 * 
+			 */
+			private static final long serialVersionUID = -1787048437145855164L;
+
+			@Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        table = new JTable(tableModel);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setRowHeight(25);
+        table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
+
+			private static final long serialVersionUID = -1965250158733860194L;
+
+			@Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (value instanceof Double) {
+                    ((JLabel) c).setText(df.format(value) + " €");
+                }
+                ((JLabel) c).setHorizontalAlignment(SwingConstants.RIGHT);
+                return c;
+            }
+        });
+        table.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (value instanceof Double) {
+                    ((JLabel) c).setText(df.format(value) + " €");
+                }
+                ((JLabel) c).setHorizontalAlignment(SwingConstants.RIGHT);
+                return c;
+            }
+        });
+        JScrollPane scrollPane = new JScrollPane(table);
+
+        JPanel inputPanel = new JPanel(new GridLayout(3, 2));
+        inputPanel.add(new JLabel("Kunde:"));
+        inputPanel.add(cbKunde);
+        inputPanel.add(new JLabel("Produkt:"));
+        inputPanel.add(cbProdukt);
+        inputPanel.add(new JLabel("Anzahl:"));
+        inputPanel.add(txtAnzahl);
+
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.add(scrollPane, BorderLayout.CENTER);
+
+        totalLabel = new JLabel("Ihre Bestellung hat einen Gesamtwert von 0,00 €");
+        totalLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        totalPanel.add(totalLabel);
+        centerPanel.add(totalPanel, BorderLayout.SOUTH);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.add(btnAddProdukt);
+        buttonPanel.add(btnRemoveProdukt);
+        buttonPanel.add(btnChangeQuantity);
+        buttonPanel.add(btnSubmit);
+
+        add(inputPanel, BorderLayout.NORTH);
+        add(centerPanel, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        btnAddProdukt.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    int anzahl = Integer.parseInt(txtAnzahl.getText());
+                    if (anzahl <= 0) {
+                        JOptionPane.showMessageDialog(null, "Anzahl muss größer als 0 sein!",
+                                "Hinweis: Eingabefehler", JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+                    Produkt produkt = (Produkt) cbProdukt.getSelectedItem();
+                    if (produkt == null) {
+                        JOptionPane.showMessageDialog(null, "Bitte wählen Sie ein Produkt aus!",
+                                "Hinweis: Eingabefehler", JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+                    int availableStock = ses.getCommunicator().getAvailableStockForProduct(produkt.getId());
+                    if (availableStock < 0) {
+                        JOptionPane.showMessageDialog(null, "Fehler beim Abrufen des Lagerbestands!",
+                                "Fehler: Bestandsprüfung", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    BestellungProdukt existingProdukt = produkteList.stream()
+                            .filter(bp -> bp.getProdukt().getId() == produkt.getId())
+                            .findFirst()
+                            .orElse(null);
+                    if (existingProdukt != null) {
+                        int neueAnzahl = existingProdukt.getAnzahl() + anzahl;
+                        if (neueAnzahl > availableStock) {
+                            JOptionPane.showMessageDialog(null, "Nur " + availableStock + " Einheiten von " + produkt.getName() + " verfügbar!",
+                                    "Hinweis: Bestand unzureichend", JOptionPane.INFORMATION_MESSAGE);
+                            return;
+                        }
+                        int rowIndex = produkteList.indexOf(existingProdukt);
+                        existingProdukt.setAnzahl(neueAnzahl);
+                        updateTableRow(rowIndex, existingProdukt);
+                    } else {
+                        if (anzahl > availableStock) {
+                            JOptionPane.showMessageDialog(null, "Nur " + availableStock + " Einheiten von " + produkt.getName() + " verfügbar!",
+                                    "Hinweis: Bestand unzureichend", JOptionPane.INFORMATION_MESSAGE);
+                            return;
+                        }
+                        BestellungProdukt bestellungProdukt = new BestellungProdukt(produkt, anzahl);
+                        tableModel.addRow(new Object[]{
+                                produkt.getHersteller(),
+                                produkt.getName(),
+                                anzahl,
+                                produkt.getPreis(),
+                                produkt.getPreis() * anzahl
+                        });
+                        produkteList.add(bestellungProdukt);
+                    }
+                    updateTotalLabel();
+                    txtAnzahl.setText("");
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(null, "Bitte geben Sie eine gültige Anzahl ein!",
+                            "Hinweis: Eingabefehler", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        });
+
+        btnRemoveProdukt.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow >= 0) {
+                    String produktName = (String) tableModel.getValueAt(selectedRow, 1);
+                    int confirm = JOptionPane.showConfirmDialog(
+                        null,
+                        "Möchten Sie das Produkt '" + produktName + "' aus der Bestellung entfernen?",
+                        "Produkt entfernen",
+                        JOptionPane.YES_NO_OPTION
+                    );
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        tableModel.removeRow(selectedRow);
+                        produkteList.remove(selectedRow);
+                        updateTotalLabel();
+                        JOptionPane.showMessageDialog(
+                            null,
+                            "Produkt '" + produktName + "' wurde aus der Bestellung entfernt.",
+                            "Hinweis: Eintrag entfernt",
+                            JOptionPane.INFORMATION_MESSAGE
+                        );
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(null, "Bitte wählen Sie ein Produkt aus der Tabelle aus!",
+                            "Hinweis: Keine Auswahl", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        });
+
+        btnChangeQuantity.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow >= 0) {
+                    BestellungProdukt bp = produkteList.get(selectedRow);
+                    String input = JOptionPane.showInputDialog(null, "Neue Menge für " + bp.getProdukt().getName() + ":",
+                            bp.getAnzahl());
+                    if (input != null) {
+                        try {
+                            int neueAnzahl = Integer.parseInt(input);
+                            int availableStock = ses.getCommunicator().getAvailableStockForProduct(bp.getProdukt().getId());
+                            if (neueAnzahl < 0) {
+                                JOptionPane.showMessageDialog(null, "Anzahl darf nicht negativ sein!",
+                                        "Hinweis: Eingabefehler", JOptionPane.INFORMATION_MESSAGE);
+                                return;
+                            }
+                            if (neueAnzahl > availableStock) {
+                                JOptionPane.showMessageDialog(null, "Nur " + availableStock + " Einheiten von " + bp.getProdukt().getName() + " verfügbar!",
+                                        "Hinweis: Bestand unzureichend", JOptionPane.INFORMATION_MESSAGE);
+                                return;
+                            }
+                            bp.setAnzahl(neueAnzahl);
+                            updateTableRow(selectedRow, bp);
+                            if (neueAnzahl == 0) {
+                                tableModel.removeRow(selectedRow);
+                                produkteList.remove(selectedRow);
+                                JOptionPane.showMessageDialog(null, "Produkt " + bp.getProdukt().getName() + " wurde entfernt (Menge = 0).",
+                                        "Hinweis: Produkt entfernt", JOptionPane.INFORMATION_MESSAGE);
+                            }
+                            updateTotalLabel();
+                        } catch (NumberFormatException ex) {
+                            JOptionPane.showMessageDialog(null, "Bitte geben Sie eine gültige Anzahl ein!",
+                                    "Hinweis: Eingabefehler", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(null, "Bitte wählen Sie ein Produkt aus der Tabelle aus!",
+                            "Hinweis: Keine Auswahl", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        });
+
+        btnSubmit.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    Kunde kunde = (Kunde) cbKunde.getSelectedItem();
+                    if (kunde == null) {
+                        JOptionPane.showMessageDialog(null, "Bitte wählen Sie einen Kunden aus!",
+                                "Hinweis: Eingabefehler", JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+                    if (produkteList.isEmpty()) {
+                        JOptionPane.showMessageDialog(null, "Bitte fügen Sie mindestens ein Produkt hinzu!",
+                                "Hinweis: Eingabefehler", JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+                    Date date = new Date();
+                    Bestellung bestellung = new Bestellung(kunde, date, produkteList);
+                    boolean success = ses.getCommunicator().addBestellung(bestellung);
+                    if (success) {
+                        JOptionPane.showMessageDialog(null, "Bestellung abgeschickt",
+                                "Hinweis: Bestellung abgeschickt", JOptionPane.INFORMATION_MESSAGE);
+                        Bestellung storedBestellung = ses.getCommunicator().getBestellungDetails(bestellung.getId());
+                        if (storedBestellung != null) {
+                            BestellungZusammenfassung summaryDialog = new BestellungZusammenfassung(
+                                    parentFrame, ses, storedBestellung);
+                            summaryDialog.setVisible(true);
+                        } else {
+                            System.out.println("Fallback: Verwende ursprüngliche Bestellung mit ID " + bestellung.getId());
+                            BestellungZusammenfassung summaryDialog = new BestellungZusammenfassung(
+                                    parentFrame, ses, bestellung);
+                            summaryDialog.setVisible(true);
+                        }
+                        navigateToBestellungPage();
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Fehler: Bestellung konnte nicht gespeichert werden!",
+                                "Fehler: Bestellung speichern", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, "Fehler beim Speichern der Bestellung: " + ex.getMessage(),
+                            "Fehler: Bestellung speichern", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                }
+            }
+        });
+    }
+
+    private void updateTableRow(int rowIndex, BestellungProdukt bp) {
+        Produkt p = bp.getProdukt();
+        tableModel.setValueAt(p.getHersteller(), rowIndex, 0);
+        tableModel.setValueAt(p.getName(), rowIndex, 1);
+        tableModel.setValueAt(bp.getAnzahl(), rowIndex, 2);
+        tableModel.setValueAt(p.getPreis(), rowIndex, 3);
+        tableModel.setValueAt(p.getPreis() * bp.getAnzahl(), rowIndex, 4);
+    }
+
+    private void updateTotalLabel() {
+        DecimalFormat df = new DecimalFormat("#,##0.00");
+        double total = produkteList.stream()
+                .mapToDouble(bp -> bp.getProdukt().getPreis() * bp.getAnzahl())
+                .sum();
+        totalLabel.setText("Ihre Bestellung hat einen Gesamtwert von " + df.format(total) + " €");
+    }
+
+    private boolean showCustomerQueryDialog() {
+        Object[] options = {"Kunde existiert", "Kunde hinzufügen"};
+        int choice = JOptionPane.showOptionDialog(this,
+                "Existiert der Kunde bereits?",
+                "Kundenauswahl",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]);
+        
+        if (choice == 1) {
+            EditKunde editKunde = new EditKunde(ses, parentFrame, null);
+            editKunde.setVisible(true);
+            
+            if (editKunde.isCanceled()) {
+                canceled = true;
+                return false;
+            }
+
+            Kunde newKunde = editKunde.getSavedKunde();
+            if (newKunde != null) {
+                updateCustomerComboBox(newKunde);
+                JOptionPane.showMessageDialog(this, "Kunde " + newKunde.toString() + " erfolgreich hinzugefügt. Bitte setzen Sie die Bestellung fort.",
+                        "Hinweis: Kunde hinzugefügt", JOptionPane.INFORMATION_MESSAGE);
+                return true;
+            } else {
+                JOptionPane.showMessageDialog(this, "Kein neuer Kunde wurde hinzugefügt. Bitte wählen Sie einen bestehenden Kunden oder versuchen Sie es erneut.",
+                        "Hinweis: Kein Kunde hinzugefügt", JOptionPane.WARNING_MESSAGE);
+                canceled = true;
+                return false;
+            }
+        } else if (choice == JOptionPane.CLOSED_OPTION) {
+            canceled = true;
+            return false;
+        }
+        return true;
+    }
+
+    private void updateCustomerComboBox() {
+        updateCustomerComboBox(null);
+    }
+
+    private void updateCustomerComboBox(Kunde newKunde) {
+        cbKunde.removeAllItems();
+        try {
+            List<Kunde> kunden = ses.getCommunicator().getKunden();
+            if (kunden == null || kunden.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Keine Kunden gefunden!", "Fehler: Kunden laden", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (newKunde != null) {
+                cbKunde.addItem(newKunde);
+            }
+
+            for (Kunde kunde : kunden) {
+                if (newKunde == null || kunde.getId() != newKunde.getId()) {
+                    cbKunde.addItem(kunde);
+                }
+            }
+
+            if (newKunde != null) {
+                cbKunde.setSelectedItem(newKunde);
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Fehler beim Laden der Kunden: " + e.getMessage(),
+                    "Fehler: Kunden laden", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+
+    private void navigateToBestellungPage() {
+        dispose();
+        ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, MenuActionCommands.BESTELLUNG_PAGE.toString());
+        new LagerUIHandler(ses, parentFrame, contentPane, parentFrame).actionPerformed(event);
+    }
+
+    public boolean isCanceled() {
+        return canceled;
+    }
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+    <fullyQualifiedTypeName name="thw.edu.javaII.port.warehouse.model.LagerBestand"/>
+    <fullyQualifiedTypeName name="thw.edu.javaII.port.warehouse.model.LagerPlatz"/>
+    <fullyQualifiedTypeName name="thw.edu.javaII.port.warehouse.model.Produkt"/>
+    <fullyQualifiedTypeName name="java.util.logging.Logger"/>
+    <fullyQualifiedTypeName name="java.util.logging.Handler"/>
+    <fullyQualifiedTypeName name="java.util.logging.Level"/>
+    <fullyQualifiedTypeName name="java.lang.System.Logger"/>
+    <fullyQualifiedTypeName name="thw.edu.javaII.port.warehouse.model.common.Info"/>
+    <fullyQualifiedTypeName name="java.lang.System"/>
+    <fullyQualifiedTypeName name="java.lang.System.Logger.Level"/>
+    <fullyQualifiedTypeName name="java.lang.Exception"/>
+    <fullyQualifiedTypeName name="thw.edu.javaII.port.warehouse.server.init.Loading"/>
+</qualifiedTypeNameHistroy>

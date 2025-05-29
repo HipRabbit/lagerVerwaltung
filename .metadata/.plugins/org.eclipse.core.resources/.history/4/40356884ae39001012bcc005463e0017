@@ -1,0 +1,82 @@
+package thw.edu.javaII.port.warehouse.model;
+
+import java.io.Serializable;
+import java.util.Date;
+
+public class Nachbestellung implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private int id;
+    private Produkt produkt;
+    private int menge;
+    private LagerPlatz lagerplatz;
+    private Date datum;
+    private String status;
+
+    public Nachbestellung() {
+        this.status = "ausgelöst";
+        this.datum = new Date();
+    }
+
+    public Nachbestellung(int id, Produkt produkt, int menge, LagerPlatz lagerplatz, Date datum, String status) {
+        this.id = id;
+        this.produkt = produkt;
+        this.menge = menge;
+        this.lagerplatz = lagerplatz;
+        this.datum = datum != null ? new Date(datum.getTime()) : new Date();
+        this.status = status != null ? status : "ausgelöst";
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public Produkt getProdukt() {
+        return produkt;
+    }
+
+    public void setProdukt(Produkt produkt) {
+        this.produkt = produkt;
+    }
+
+    public int getMenge() {
+        return menge;
+    }
+
+    public void setMenge(int menge) {
+        this.menge = menge;
+    }
+
+    public LagerPlatz getLagerplatz() {
+        return lagerplatz;
+    }
+
+    public void setLagerplatz(LagerPlatz lagerplatz) {
+        this.lagerplatz = lagerplatz;
+    }
+
+    public Date getDatum() {
+        return datum;
+    }
+
+    public void setDatum(Date datum) {
+        this.datum = datum != null ? new Date(datum.getTime()) : null;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Nachbestellung [ID=%d, Produkt=%s, Menge=%d, Lagerplatz=%s, Datum=%s, Status=%s]",
+                id, produkt.getName(), menge, lagerplatz.getName(), datum, status);
+    }
+}

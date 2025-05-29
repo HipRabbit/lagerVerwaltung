@@ -1,0 +1,551 @@
+package thw.edu.javaII.port.warehouse.ui.common;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Scanner;
+import java.util.stream.Collectors;
+
+import thw.edu.javaII.port.warehouse.model.common.Cast;
+import thw.edu.javaII.port.warehouse.model.common.Info;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.model.FilterCriteria;
+import thw.edu.javaII.port.warehouse.model.deo.Status;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+import thw.edu.javaII.port.warehouse.model.Kunde;
+import thw.edu.javaII.port.warehouse.model.Bestellung;
+import thw.edu.javaII.port.warehouse.model.BestellungProdukt;
+
+public class Communicator {
+    private ObjectInputStream fromServer;
+    private ObjectOutputStream toServer;
+    private Socket sock;
+
+    public Communicator() {
+        try {
+            sock = new Socket(Info.NAME_SERVER, Info.PORT_SERVER);
+            sock.setSoTimeout(Info.TIMEOUT_CLIENT);
+            toServer = new ObjectOutputStream(sock.getOutputStream());
+            fromServer = new ObjectInputStream(sock.getInputStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<LagerBestand> getBestand() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.STATISTIK);
+            deo.setCommand(Command.BESTAND);
+            toServer.writeObject(deo);
+            return Cast.safeListCast(((WarehouseReturnDEO) fromServer.readObject()).getData(), LagerBestand.class);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public List<LagerBestand> getTOP10Bestand() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.STATISTIK);
+            deo.setCommand(Command.TOP);
+            toServer.writeObject(deo);
+            return Cast.safeListCast(((WarehouseReturnDEO) fromServer.readObject()).getData(), LagerBestand.class);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public List<LagerBestand> getLOW10Bestand() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.STATISTIK);
+            deo.setCommand(Command.LOW);
+            toServer.writeObject(deo);
+            return Cast.safeListCast(((WarehouseReturnDEO) fromServer.readObject()).getData(), LagerBestand.class);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public List<LagerBestand> search(String search) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.LAGERBESTAND);
+            deo.setCommand(Command.SEARCH);
+            deo.setData(search);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = ((WarehouseReturnDEO) fromServer.readObject());
+            return Cast.safeListCast(d.getData(), LagerBestand.class);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public WarehouseReturnDEO updateLagerBestand(LagerBestand mod) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.LAGERBESTAND);
+            deo.setCommand(Command.UPDATE);
+            deo.setData(mod);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = ((WarehouseReturnDEO) fromServer.readObject());
+            return d;
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public LagerPlatz[] getFreeLagerPlatz() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.LAGERPLATZ);
+            deo.setCommand(Command.LIST);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = ((WarehouseReturnDEO) fromServer.readObject());
+            List<LagerPlatz> lager = Cast.safeListCast(d.getData(), LagerPlatz.class);
+            deo = new WarehouseDEO();
+            deo.setZone(Zone.LAGERBESTAND);
+            deo.setCommand(Command.LIST);
+            toServer.writeObject(deo);
+            d = ((WarehouseReturnDEO) fromServer.readObject());
+            List<LagerBestand> bestand = Cast.safeListCast(d.getData(), LagerBestand.class);
+            List<LagerPlatz> removeCandidates = new ArrayList<LagerPlatz>();
+            for (LagerPlatz p : lager) {
+                for (LagerBestand b : bestand) {
+                    if (b.getLagerplatz_id().getId() == p.getId()) {
+                        removeCandidates.add(p);
+                        break;
+                    }
+                }
+            }
+            lager.removeAll(removeCandidates);
+            return lager.toArray(new LagerPlatz[0]);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public void close() {
+        try {
+            if (fromServer != null)
+                fromServer.close();
+            if (toServer != null)
+                toServer.close();
+            if (sock != null)
+                sock.close();
+        } catch (IOException e) {
+            ;
+        }
+    }
+
+    public boolean addProdukt(Produkt p, LagerBestand l) {
+        try {
+            // Produkt hinzufügen
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.PRODUKT);
+            deo.setCommand(Command.ADD);
+            deo.setData(p);
+            toServer.writeObject(deo);
+            toServer.flush();
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            if (!d.getStatus().equals(Status.OK)) {
+                System.err.println("Fehler beim Hinzufügen des Produkts: " + d.getMessage());
+                return false;
+            }
+
+            // Produkt mit generierter ID abrufen
+            deo = new WarehouseDEO();
+            deo.setZone(Zone.PRODUKT);
+            deo.setCommand(Command.GETBYMODEL);
+            deo.setData(p);
+            toServer.writeObject(deo);
+            toServer.flush();
+            d = (WarehouseReturnDEO) fromServer.readObject();
+            Produkt pr = Cast.safeCast(d.getData(), Produkt.class);
+            if (pr == null) {
+                System.err.println("Fehler: Produkt konnte nicht abgerufen werden.");
+                return false;
+            }
+
+            // Lagerbestand hinzufügen
+            l.setProdukt_id(pr);
+            deo = new WarehouseDEO();
+            deo.setZone(Zone.LAGERBESTAND);
+            deo.setCommand(Command.ADD);
+            deo.setData(l);
+            toServer.writeObject(deo);
+            toServer.flush();
+            d = (WarehouseReturnDEO) fromServer.readObject();
+            if (d.getStatus().equals(Status.OK)) {
+                return true;
+            }
+            System.err.println("Fehler beim Hinzufügen des Lagerbestands: " + d.getMessage());
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public void closeServer() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.GENERAL);
+            deo.setCommand(Command.END);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = ((WarehouseReturnDEO) fromServer.readObject());
+            if (d.getStatus() == Status.OK) {
+                sock = new Socket(Info.NAME_SERVER, Info.PORT_SERVER);
+                sock.setSoTimeout(Info.TIMEOUT_CLIENT);
+                toServer = new ObjectOutputStream(sock.getOutputStream());
+                fromServer = new ObjectInputStream(sock.getInputStream());
+                deo = new WarehouseDEO();
+                deo.setZone(Zone.GENERAL);
+                deo.setCommand(Command.END);
+                toServer.writeObject(deo);
+                d = ((WarehouseReturnDEO) fromServer.readObject());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Kunde getKundeById(int id) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.KUNDE);
+            deo.setCommand(Command.SEARCH);
+            deo.setData(id);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            return Cast.safeCast(d.getData(), Kunde.class);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public boolean addKunde(Kunde k) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.KUNDE);
+            deo.setCommand(Command.ADD);
+            deo.setData(k);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            return d.getStatus().equals(Status.OK);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean updateKunde(Kunde k) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.KUNDE);
+            deo.setCommand(Command.UPDATE);
+            deo.setData(k);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            return d.getStatus().equals(Status.OK);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean deleteKunde(Kunde k) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.KUNDE);
+            deo.setCommand(Command.DELETE);
+            deo.setData(k);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            return d.getStatus().equals(Status.OK);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public List<Kunde> getKunden() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.KUNDE);
+            deo.setCommand(Command.LIST);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            return Cast.safeListCast(d.getData(), Kunde.class);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
+    }
+
+    public int getNextKundeId() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.KUNDE);
+            deo.setCommand(Command.GETNEXTID);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            if (d.getStatus().equals(Status.OK)) {
+                Integer nextId = Cast.safeCast(d.getData(), Integer.class);
+                if (nextId != null) {
+                    System.out.println("Nächste Kunden-ID erhalten: " + nextId);
+                    return nextId;
+                } else {
+                    System.err.println("Fehler: Keine gültige ID im WarehouseReturnDEO");
+                    return -1;
+                }
+            } else {
+                System.err.println("Fehler: Server antwortete mit Status " + d.getStatus() + ": " + d.getMessage());
+                return -1;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Kommunikationsfehler in getNextKundeId: " + e.getMessage());
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    public boolean addBestellung(Bestellung bestellung) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.BESTELLUNG);
+            deo.setCommand(Command.ADD);
+            deo.setData(bestellung);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            System.out.println("addBestellung: Status=" + d.getStatus() + ", Message=" + d.getMessage());
+            if (d.getStatus() == Status.OK) {
+                System.out.println("addBestellung: Bestellung erfolgreich gespeichert, ID=" + 
+                    (bestellung.getId() > 0 ? bestellung.getId() : "unbekannt"));
+                return true;
+            }
+            System.err.println("Fehler beim Speichern der Bestellung: " + d.getMessage());
+            return false;
+        } catch (Exception e) {
+            System.err.println("Fehler in addBestellung: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public List<Bestellung> getBestellungenByKunde(int kundeId) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.BESTELLUNG);
+            deo.setCommand(Command.SEARCH);
+            deo.setData(kundeId);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            return Cast.safeListCast(d.getData(), Bestellung.class);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
+    }
+    public List<Bestellung> getFilteredBestellungen(Date startDate, Date endDate, Double minAmount, Integer productId) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.BESTELLUNG);
+            deo.setCommand(Command.FILTER);
+            deo.setData(new FilterCriteria(startDate, endDate, minAmount, productId));
+            toServer.writeObject(deo);
+            WarehouseReturnDEO response = (WarehouseReturnDEO) fromServer.readObject();
+            if (response.getStatus() == Status.OK) {
+                return Cast.safeListCast(response.getData(), Bestellung.class);
+            } else {
+                System.err.println("Fehler in getFilteredBestellungen: " + response.getMessage());
+                return new ArrayList<>();
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Fehler beim Abrufen gefilterter Bestellungen: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+    
+
+    public List<Produkt> getProdukte() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.PRODUKT);
+            deo.setCommand(Command.LIST);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            return Cast.safeListCast(d.getData(), Produkt.class);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public int getAvailableStockForProduct(int produktId) {
+        try {
+            List<LagerBestand> bestand = getBestand();
+            System.out.println("Rohdaten von getBestand für Produkt-ID " + produktId + ": " + bestand);
+            if (bestand != null && !bestand.isEmpty()) {
+                String produktName = bestand.stream()
+                        .filter(b -> b.getProdukt_id().getId() == produktId)
+                        .map(b -> b.getProdukt_id().getName())
+                        .findFirst()
+                        .orElse("Unbekanntes Produkt");
+                System.out.println("Abfrage für Produkt: ID=" + produktId + ", Name=" + produktName);
+                System.out.println("Details der Lagerbestände:");
+                bestand.forEach(b -> {
+                    if (b.getProdukt_id().getId() == produktId) {
+                        System.out.println("- Produkt: " + b.getProdukt_id().getName() + 
+                                          " (ID: " + b.getProdukt_id().getId() + "), " +
+                                          "Menge: " + b.getAnzahl() + ", " +
+                                          "Lagerplatz: " + b.getLagerplatz_id().getName());
+                    }
+                });
+                int totalStock = bestand.stream()
+                        .filter(b -> b.getProdukt_id().getId() == produktId)
+                        .mapToInt(LagerBestand::getAnzahl)
+                        .sum();
+                System.out.println("Gesamter Bestand für " + produktName + " (ID: " + produktId + "): " + totalStock);
+                return totalStock;
+            }
+            System.out.println("Kein Bestand gefunden für Produkt-ID: " + produktId);
+            return 0;
+        } catch (Exception e) {
+            System.err.println("Fehler in getAvailableStockForProduct: " + e.getMessage());
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    public Bestellung getBestellungDetails(int bestellungId) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.BESTELLUNG);
+            deo.setCommand(Command.GETBYID);
+            deo.setData(bestellungId);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO response = (WarehouseReturnDEO) fromServer.readObject();
+            System.out.println("Server-Antwort: Status=" + response.getStatus() + ", Nachricht=" + response.getMessage());
+            Bestellung bestellung = Cast.safeCast(response.getData(), Bestellung.class);
+            if (bestellung != null) {
+                System.out.println("Bestellung gefunden: ID=" + bestellung.getId());
+                System.out.println("Kunde: " + (bestellung.getKunde() != null ? 
+                    bestellung.getKunde().getVorname() + " " + bestellung.getKunde().getNachname() : "null"));
+                System.out.println("Datum: " + (bestellung.getDatum() != null ? bestellung.getDatum().toString() : "null"));
+                System.out.println("Produkte: " + (bestellung.getProdukte() != null ? bestellung.getProdukte().size() : "null"));
+
+                SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+                System.out.println("=== Bestellungsdetails ===");
+                System.out.println("Bestell-ID: " + bestellung.getId());
+                System.out.println("Datum: " + (bestellung.getDatum() != null ? sdf.format(bestellung.getDatum()) : "Unbekannt"));
+                System.out.println("Kunde: " + (bestellung.getKunde() != null ? 
+                    bestellung.getKunde().getVorname() + " " + bestellung.getKunde().getNachname() : "Unbekannt"));
+                System.out.println("Lieferadresse: " + (bestellung.getKunde() != null ? bestellung.getKunde().getLieferadresse() : "Unbekannt"));
+                System.out.println("Rechnungsadresse: " + (bestellung.getKunde() != null ? bestellung.getKunde().getRechnungsadresse() : "Unbekannt"));
+                System.out.println("\nProdukte:");
+                System.out.printf("%-30s %-10s %-15s %-15s%n", "Produktname", "Anzahl", "Einzelpreis", "Gesamtpreis");
+                System.out.println("------------------------------------------------------------");
+                double gesamtpreisBestellung = 0.0;
+                if (bestellung.getProdukte() != null) {
+                    for (BestellungProdukt bp : bestellung.getProdukte()) {
+                        double einzelpreis = bp.getProdukt().getPreis();
+                        int anzahl = bp.getAnzahl();
+                        double gesamtpreisProdukt = einzelpreis * anzahl;
+                        gesamtpreisBestellung += gesamtpreisProdukt;
+                        System.out.printf("%-30s %-10d %-15.2f %-15.2f%n", 
+                            bp.getProdukt().getName(), anzahl, einzelpreis, gesamtpreisProdukt);
+                    }
+                }
+                System.out.println("------------------------------------------------------------");
+                System.out.printf("Gesamtpreis der Bestellung: %.2f EUR%n", gesamtpreisBestellung);
+                System.out.println("==========================");
+                return bestellung;
+            } else {
+                System.out.println("Bestellung mit ID " + bestellungId + " nicht gefunden.");
+                return null;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Fehler beim Abrufen der Bestellungsdetails: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public boolean updateBestellung(Bestellung bestellung) {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.BESTELLUNG);
+            deo.setCommand(Command.UPDATE);
+            deo.setData(bestellung);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            return d.getStatus().equals(Status.OK);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public List<Bestellung> getBestellungen() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.BESTELLUNG);
+            deo.setCommand(Command.LIST);
+            toServer.writeObject(deo);
+            WarehouseReturnDEO d = (WarehouseReturnDEO) fromServer.readObject();
+            System.out.println("getBestellungen: Serverantwort Status=" + d.getStatus() + 
+                               ", Message=" + d.getMessage() + 
+                               ", Data=" + (d.getData() != null ? d.getData().toString() : "null"));
+            List<Bestellung> bestellungen = Cast.safeListCast(d.getData(), Bestellung.class);
+            System.out.println("getBestellungen: Anzahl Bestellungen=" + 
+                               (bestellungen != null ? bestellungen.size() : 0));
+            if (bestellungen != null) {
+                System.out.println("getBestellungen: Bestellungs-IDs=" + bestellungen.stream()
+                        .map(b -> String.valueOf(b.getId()))
+                        .collect(Collectors.joining(", ")));
+                for (Bestellung b : bestellungen) {
+                    System.out.println("getBestellung: ID=" + b.getId() + 
+                                       ", Kunde=" + (b.getKunde() != null ? 
+                                            b.getKunde().getVorname() + " " + b.getKunde().getNachname() : "null") + 
+                                       ", Produkte=" + (b.getProdukte() != null ? b.getProdukte().size() : 0));
+                }
+            }
+            return bestellungen != null ? bestellungen : new ArrayList<>();
+        } catch (Exception e) {
+            System.err.println("Fehler in getBestellungen: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public void testBestellungDetails() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Geben Sie die Bestell-ID ein: ");
+        try {
+            int bestellungId = Integer.parseInt(scanner.nextLine());
+            getBestellungDetails(bestellungId);
+        } catch (NumberFormatException e) {
+            System.out.println("Ungültige Bestell-ID. Bitte geben Sie eine Zahl ein.");
+        }
+    }
+}

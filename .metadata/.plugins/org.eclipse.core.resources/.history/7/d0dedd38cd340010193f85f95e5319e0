@@ -1,0 +1,168 @@
+package thw.edu.javaII.port.warehouse.server;
+
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
+import thw.edu.javaII.port.warehouse.model.Kunde;
+import thw.edu.javaII.port.warehouse.model.common.Cast;
+import thw.edu.javaII.port.warehouse.model.common.Info;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.model.deo.Status;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.server.data.IStorage;
+
+public class Service {
+    private IStorage store;
+    private Logger logger;
+
+    public Service(IStorage store) {
+        this.store = store;
+        this.logger = System.getLogger(Info.LOG_NAME); // Logger initialisieren
+    }
+
+    public WarehouseReturnDEO handle(WarehouseDEO deoIn) {
+        WarehouseReturnDEO deoOut = new WarehouseReturnDEO();
+        switch (deoIn.getZone()) {
+            case KUNDE:
+                deoOut = handleZoneKunde(deoIn, deoOut);
+                break;
+            case BESTELLUNG:
+                deoOut = handleZoneBestellung(deoIn, deoOut);
+                break;
+            case PRODUKT:
+                deoOut = handleZoneProdukt(deoIn, deoOut);
+                break;
+            case LAGER:
+                deoOut = handleZoneLager(deoIn, deoOut);
+                break;
+            case LAGERPLATZ:
+                deoOut = handleZoneLagerPlatz(deoIn, deoOut);
+                break;
+            case LAGERBESTAND:
+                deoOut = handleZoneLagerBestand(deoIn, deoOut);
+                break;
+            case DEMO:
+                deoOut = handleZoneDemo(deoIn, deoOut);
+                break;
+            default:
+                deoOut.setStatus(Status.ERROR);
+                deoOut.setMessage("Unbekannte Zone: " + deoIn.getZone());
+                break;
+        }
+        return deoOut;
+    }
+
+    private WarehouseReturnDEO handleZoneKunde(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
+        switch (deoIn.getCommand()) {
+            case ADD:
+                if (deoIn.getData() != null && deoIn.getData() instanceof Kunde) {
+                    Kunde k = Cast.safeCast(deoIn.getData(), Kunde.class);
+                    try {
+                        store.addKunde(k);
+                        deoOut = new WarehouseReturnDEO(k, "Kunde erfolgreich hinzugefügt", Status.OK);
+                    } catch (RuntimeException e) {
+                        logger.log(Level.ERROR, "Failed to add Kunde: " + e.getMessage());
+                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Hinzufügen des Kunden: " + e.getMessage(), Status.ERROR);
+                    }
+                } else {
+                    deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
+                }
+                break;
+            case DELETE:
+                if (deoIn.getData() != null && deoIn.getData() instanceof Kunde) {
+                    Kunde k = Cast.safeCast(deoIn.getData(), Kunde.class);
+                    try {
+                        store.deleteKunde(k);
+                        deoOut = new WarehouseReturnDEO(null, "Kunde erfolgreich gelöscht und IDs angepasst", Status.OK);
+                    } catch (RuntimeException e) {
+                        logger.log(Level.ERROR, "Failed to delete Kunde ID " + k.getId() + ": " + e.getMessage());
+                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Löschen des Kunden: " + e.getMessage(), Status.ERROR);
+                    }
+                } else {
+                    deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
+                }
+                break;
+            case LIST:
+                try {
+                    deoOut = new WarehouseReturnDEO(store.getKunden(), "Kundenliste erfolgreich abgerufen", Status.OK);
+                } catch (RuntimeException e) {
+                    logger.log(Level.ERROR, "Failed to retrieve Kunden list: " + e.getMessage());
+                    deoOut = new WarehouseReturnDEO(null, "Fehler beim Abrufen der Kundenliste: " + e.getMessage(), Status.ERROR);
+                }
+                break;
+            case UPDATE:
+                if (deoIn.getData() != null && deoIn.getData() instanceof Kunde) {
+                    Kunde k = Cast.safeCast(deoIn.getData(), Kunde.class);
+                    try {
+                        store.updateKunde(k);
+                        deoOut = new WarehouseReturnDEO(k, "Kunde erfolgreich aktualisiert", Status.OK);
+                    } catch (RuntimeException e) {
+                        logger.log(Level.ERROR, "Failed to update Kunde ID " + k.getId() + ": " + e.getMessage());
+                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Aktualisieren des Kunden: " + e.getMessage(), Status.ERROR);
+                    }
+                } else {
+                    deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
+                }
+                break;
+            case SEARCH:
+                if (deoIn.getData() != null && deoIn.getData() instanceof Integer) {
+                    Integer id = Cast.safeCast(deoIn.getData(), Integer.class);
+                    try {
+                        Kunde k = store.getKundeById(id);
+                        deoOut = new WarehouseReturnDEO(k, k != null ? "Kunde gefunden" : "Kunde nicht gefunden", k != null ? Status.OK : Status.ERROR);
+                    } catch (RuntimeException e) {
+                        logger.log(Level.ERROR, "Failed to search Kunde ID " + id + ": " + e.getMessage());
+                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Suchen des Kunden: " + e.getMessage(), Status.ERROR);
+                    }
+                } else {
+                    deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
+                }
+                break;
+            case GETNEXTID:
+                try {
+                    int nextId = store.getNextKundeId();
+                    deoOut = new WarehouseReturnDEO(nextId, "Nächste Kunde-ID abgerufen", Status.OK);
+                } catch (RuntimeException e) {
+                    logger.log(Level.ERROR, "Failed to get next Kunde ID: " + e.getMessage());
+                    deoOut = new WarehouseReturnDEO(null, "Fehler beim Abrufen der nächsten Kunde-ID: " + e.getMessage(), Status.ERROR);
+                }
+                break;
+            default:
+                deoOut = new WarehouseReturnDEO(null, "Unbekanntes Kommando", Status.ERROR);
+                break;
+        }
+        return deoOut;
+    }
+
+    // Platzhalter für andere Zonen-Methoden
+    private WarehouseReturnDEO handleZoneBestellung(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
+        // TODO: Implementieren, falls erforderlich
+        return new WarehouseReturnDEO(null, "Bestellung-Zone nicht implementiert", Status.ERROR);
+    }
+
+    private WarehouseReturnDEO handleZoneProdukt(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
+        // TODO: Implementieren, falls erforderlich
+        return new WarehouseReturnDEO(null, "Produkt-Zone nicht implementiert", Status.ERROR);
+    }
+
+    private WarehouseReturnDEO handleZoneLager(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
+        // TODO: Implementieren, falls erforderlich
+        return new WarehouseReturnDEO(null, "Lager-Zone nicht implementiert", Status.ERROR);
+    }
+
+    private WarehouseReturnDEO handleZoneLagerPlatz(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
+        // TODO: Implementieren, falls erforderlich
+        return new WarehouseReturnDEO(null, "Lagerplatz-Zone nicht implementiert", Status.ERROR);
+    }
+
+    private WarehouseReturnDEO handleZoneLagerBestand(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
+        // TODO: Implementieren, falls erforderlich
+        return new WarehouseReturnDEO(null, "Lagerbestand-Zone nicht implementiert", Status.ERROR);
+    }
+
+    private WarehouseReturnDEO handleZoneDemo(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
+        // TODO: Implementieren, falls erforderlich
+        return new WarehouseReturnDEO(null, "Demo-Zone nicht implementiert", Status.ERROR);
+    }
+}

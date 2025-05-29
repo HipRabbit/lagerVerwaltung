@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename package &apos;init&apos; to &apos;thw.edu.javaII.port.warehouse.init&apos;&#x0A;- Original project: &apos;thw.edu.javaII.port.warehouse.init&apos;&#x0A;- Original element: &apos;thw.edu.javaII.port.warehouse.init/src/init&apos;&#x0A;- Renamed element: &apos;thw.edu.javaII.port.warehouse.init/src/thw.edu.javaII.port.warehouse.init&apos;&#x0A;- Update references to refactored element&#x0A;- Update textual occurrences in comments and strings" description="Rename package &apos;init&apos;" flags="589830" hierarchical="false" id="org.eclipse.jdt.ui.rename.package" input="/src&lt;init" name="thw.edu.javaII.port.warehouse.init" qualified="false" references="true" stamp="1714035035490" textual="false" version="1.0"/>
+</session>

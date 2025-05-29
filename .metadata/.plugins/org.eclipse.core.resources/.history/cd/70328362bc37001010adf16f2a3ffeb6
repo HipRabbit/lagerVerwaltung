@@ -1,0 +1,139 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+import net.miginfocom.swing.MigLayout;
+import thw.edu.javaII.port.warehouse.model.Lager;
+import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.model.common.Cast;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+
+public class EditLagerPlatz extends JDialog {
+    private Session ses;
+    private LagerPlatz lagerPlatz; // Lagerplatz, der bearbeitet wird
+    private JTextField txtName, txtKapazitaet;
+    private JComboBox<Lager> cbLager;
+    private JButton btnSave, btnCancel;
+
+    // Bestehender Konstruktor
+    public EditLagerPlatz(Session ses, JFrame parent) {
+        super(parent, "Lagerplatz bearbeiten", true);
+        this.ses = ses;
+        initializeUI();
+    }
+
+    // Neuer Konstruktor mit LagerPlatz-Parameter
+    public EditLagerPlatz(Session ses, JFrame parent, LagerPlatz lagerPlatz) {
+        super(parent, "Lagerplatz bearbeiten", true);
+        this.ses = ses;
+        this.lagerPlatz = lagerPlatz;
+        initializeUI();
+    }
+
+    private void initializeUI() {
+        setLayout(new MigLayout("fill, wrap 2", "[right][grow]", ""));
+        setSize(400, 250); // Reduziert, da cbLagerPlatz entfernt wurde
+        setLocationRelativeTo(getParent());
+
+        // Eingabefelder
+        add(new JLabel("Name:"));
+        txtName = new JTextField(20);
+        add(txtName, "growx");
+
+        add(new JLabel("Kapazität:"));
+        txtKapazitaet = new JTextField(20);
+        add(txtKapazitaet, "growx");
+
+        add(new JLabel("Lager:"));
+        cbLager = new JComboBox<>();
+        loadLager();
+        add(cbLager, "growx");
+
+        // Buttons
+        btnSave = new JButton("Speichern");
+        btnSave.addActionListener(e -> saveLagerPlatz());
+        btnCancel = new JButton("Abbrechen");
+        btnCancel.addActionListener(e -> dispose());
+        add(btnSave, "split 2, right");
+        add(btnCancel);
+
+        // Felder mit Daten des übergebenen Lagerplatzes füllen
+        updateFields();
+    }
+
+    private void loadLager() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.LAGER);
+            deo.setCommand(Command.LIST);
+            WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                java.util.List<Lager> lagerList = Cast.safeListCast(ret.getData(), Lager.class);
+                cbLager.removeAllItems();
+                if (lagerList != null) {
+                    for (Lager lager : lagerList) {
+                        cbLager.addItem(lager);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Fehler beim Laden der Lager: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void updateFields() {
+        if (lagerPlatz != null) {
+            txtName.setText(lagerPlatz.getName());
+            txtKapazitaet.setText(String.valueOf(lagerPlatz.getKapazitaet()));
+            cbLager.setSelectedItem(lagerPlatz.getLager_id());
+        } else {
+            txtName.setText("");
+            txtKapazitaet.setText("");
+            cbLager.setSelectedItem(null);
+        }
+    }
+
+    private void saveLagerPlatz() {
+        try {
+            if (lagerPlatz == null) {
+                JOptionPane.showMessageDialog(this, "Kein Lagerplatz ausgewählt.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String name = txtName.getText().trim();
+            int kapazitaet = Integer.parseInt(txtKapazitaet.getText().trim());
+            Lager lager = (Lager) cbLager.getSelectedItem();
+
+            if (name.isEmpty() || kapazitaet <= 0 || lager == null) {
+                JOptionPane.showMessageDialog(this, "Bitte füllen Sie alle Felder korrekt aus.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            lagerPlatz.setName(name);
+            lagerPlatz.setKapazitaet(kapazitaet);
+            lagerPlatz.setLager_id(lager);
+
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.LAGERPLATZ);
+            deo.setCommand(Command.UPDATE);
+            deo.setData(lagerPlatz);
+
+            WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                JOptionPane.showMessageDialog(this, "Lagerplatz erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                dispose();
+            } else {
+                JOptionPane.showMessageDialog(this, ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Ungültige Kapazität. Bitte geben Sie eine Zahl ein.", "Fehler", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Fehler: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+}

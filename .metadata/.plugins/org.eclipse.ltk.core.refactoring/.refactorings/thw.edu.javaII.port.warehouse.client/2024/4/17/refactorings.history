@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename package &apos;client&apos; to &apos;thw.edu.javaII.port.warehouse.client&apos;&#x0A;- Original project: &apos;thw.edu.javaII.port.warehouse.client&apos;&#x0A;- Original element: &apos;thw.edu.javaII.port.warehouse.client/src/client&apos;&#x0A;- Renamed element: &apos;thw.edu.javaII.port.warehouse.client/src/thw.edu.javaII.port.warehouse.client&apos;&#x0A;- Update references to refactored element&#x0A;- Update textual occurrences in comments and strings" description="Rename package &apos;client&apos;" flags="589830" hierarchical="false" id="org.eclipse.jdt.ui.rename.package" input="/src&lt;client" name="thw.edu.javaII.port.warehouse.client" qualified="false" references="true" stamp="1714035206804" textual="false" version="1.0"/>
+</session>

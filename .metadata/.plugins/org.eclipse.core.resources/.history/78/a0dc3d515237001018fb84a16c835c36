@@ -1,0 +1,94 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import java.awt.*;
+import javax.swing.*;
+import java.io.IOException;
+import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.model.common.Cast;
+
+public class LagerPlatzPage extends JPanel {
+    private Session ses;
+    private JTable table;
+    private LagerPlatzTableModel tableModel;
+
+    public LagerPlatzPage(Session ses) {
+        this.ses = ses;
+        setLayout(new BorderLayout());
+        initializeUI();
+    }
+
+    private void initializeUI() {
+        JLabel lblTitle = new JLabel("Lagerplätze Übersicht");
+        lblTitle.setFont(new Font("Arial", Font.BOLD, 16));
+        add(lblTitle, BorderLayout.NORTH);
+
+        tableModel = new LagerPlatzTableModel();
+        table = new JTable(tableModel);
+        table.setFillsViewportHeight(true);
+        table.setRowHeight(25);
+        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        refresh();
+    }
+
+    public void refresh() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.LAGERPLATZ);
+            deo.setCommand(Command.LIST);
+            WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                java.util.List<LagerPlatz> lagerPlatzList = Cast.safeListCast(ret.getData(), LagerPlatz.class);
+                tableModel.setData(lagerPlatzList);
+            } else {
+                JOptionPane.showMessageDialog(this, "Fehler beim Abrufen der Lagerplätze: " + ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                tableModel.setData(new java.util.ArrayList<>());
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Kommunikationsfehler: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            tableModel.setData(new java.util.ArrayList<>());
+        }
+    }
+}
+
+class LagerPlatzTableModel extends javax.swing.table.AbstractTableModel {
+    private java.util.List<LagerPlatz> data = new java.util.ArrayList<>();
+    private String[] columnNames = {"ID", "Name", "Kapazität", "Lager"};
+
+    public void setData(java.util.List<LagerPlatz> data) {
+        this.data = data != null ? data : new java.util.ArrayList<>();
+        fireTableDataChanged();
+    }
+
+    @Override
+    public int getRowCount() {
+        return data.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return columnNames.length;
+    }
+
+    @Override
+    public Object getValueAt(int row, int col) {
+        LagerPlatz lagerPlatz = data.get(row);
+        switch (col) {
+            case 0: return lagerPlatz.getId();
+            case 1: return lagerPlatz.getName();
+            case 2: return lagerPlatz.getKapazitaet();
+            case 3: return lagerPlatz.getLager_id().getName();
+            default: return null;
+        }
+    }
+
+    @Override
+    public String getColumnName(int col) {
+        return columnNames[col];
+    }
+}

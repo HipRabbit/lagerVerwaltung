@@ -1,0 +1,66 @@
+package thw.edu.javaII.port.warehouse.ui.common;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
+
+public class Session {
+    private boolean login;
+    private Communicator comm;
+    private UserService userService;
+    private Map<Integer, Integer> initialBestand; // Produkt-ID -> Initiale Menge
+    private List<Nachbestellung> nachbestellungen;
+
+    public Session() {
+        login = false;
+        comm = new Communicator(this);
+        userService = new UserService();
+        initialBestand = new HashMap<>();
+        nachbestellungen = new ArrayList<>();
+        initializeInitialBestand();
+    }
+
+    public void initializeInitialBestand() {
+        List<LagerBestand> bestand = comm.getBestand();
+        if (bestand != null) {
+            for (LagerBestand lb : bestand) {
+                initialBestand.put(lb.getProdukt_id().getId(), lb.getAnzahl());
+            }
+        }
+    }
+
+    public boolean isLogin() {
+        return login;
+    }
+
+    public void setLogin(boolean login) {
+        this.login = login;
+    }
+
+    public Communicator getCommunicator() {
+        return comm;
+    }
+
+    public UserService getUserService() {
+        return userService;
+    }
+
+    public Map<Integer, Integer> getInitialBestand() {
+        return initialBestand;
+    }
+
+    public List<Nachbestellung> getNachbestellungen() {
+        return nachbestellungen;
+    }
+
+    public void addNachbestellung(Nachbestellung nachbestellung) {
+        nachbestellungen.add(nachbestellung);
+    }
+
+    public void close() {
+        comm.close();
+    }
+}

@@ -1,0 +1,37 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import javax.swing.*;
+import java.awt.*;
+import java.util.List; // Korrigierter Import
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
+import thw.edu.javaII.port.warehouse.ui.model.NachbestellungTableModel;
+
+public class NachbestellungPage extends JPanel {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -2680742072038767197L;
+	private NachbestellungTableModel tableModel;
+    private JTable table;
+    private Session session;
+
+    public NachbestellungPage(Session session) {
+        this.session = session;
+        setLayout(new BorderLayout());
+        JLabel title = new JLabel("Nachbestellungen", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 16));
+        add(title, BorderLayout.NORTH);
+
+        List<Nachbestellung> nachbestellungen = session.getCommunicator().getNachbestellungen();
+        tableModel = new NachbestellungTableModel(nachbestellungen);
+        table = new JTable(tableModel);
+        table.setFillsViewportHeight(true);
+        JScrollPane scrollPane = new JScrollPane(table);
+        add(scrollPane, BorderLayout.CENTER);
+    }
+
+    public void refresh() {
+        tableModel.updateData(session.getCommunicator().getNachbestellungen());
+    }
+}

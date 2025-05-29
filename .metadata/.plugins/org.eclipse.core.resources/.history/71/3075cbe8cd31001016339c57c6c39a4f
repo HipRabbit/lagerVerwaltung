@@ -1,0 +1,54 @@
+package thw.edu.javaII.port.warehouse.model;
+
+import java.io.Serializable;
+
+public class Produkt implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private int id;
+    private String name;
+    private String hersteller;
+    private double preis;
+
+    public Produkt() {
+    }
+
+    public Produkt(int id, String name, String hersteller, double preis) {
+        this.id = id;
+        this.name = name;
+        this.hersteller = hersteller;
+        this.preis = preis;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getHersteller() {
+        return hersteller;
+    }
+
+    public void setHersteller(String hersteller) {
+        this.hersteller = hersteller;
+    }
+
+    public double getPreis() {
+        return preis;
+    }
+
+    public void setPreis(double preis) {
+        this.preis = preis;
+    }
+}

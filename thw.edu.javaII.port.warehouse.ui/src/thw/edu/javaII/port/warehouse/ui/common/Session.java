@@ -1,0 +1,35 @@
+package thw.edu.javaII.port.warehouse.ui.common;
+
+
+public class Session {
+	private boolean login;
+	private Communicator comm;
+	private UserService userService;
+
+	public Session() {
+		login = false;
+		comm = new Communicator();
+		userService = new UserService();
+	}
+
+	public boolean isLogin() {
+		return login;
+	}
+
+	public void setLogin(boolean login) {
+		this.login = login;
+	}
+
+	public Communicator getCommunicator() {
+		return comm;
+	}
+	
+	public UserService getUserService() {
+		return userService;
+	}
+	
+	public void close() {
+		comm.close();
+	}
+
+}

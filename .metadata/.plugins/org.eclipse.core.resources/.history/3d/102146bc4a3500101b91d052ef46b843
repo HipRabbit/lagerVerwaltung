@@ -1,0 +1,179 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import thw.edu.javaII.port.warehouse.model.Bestellung;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.ui.model.BestellungOverviewTableModel;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+public class BestellungPage extends JPanel {
+    private final Session session;
+    private JTable bestellungTable;
+    private BestellungOverviewTableModel tableModel;
+
+    public BestellungPage(Session session) {
+        this.session = session;
+        setLayout(new BorderLayout());
+        initializeUI();
+    }
+
+    private void initializeUI() {
+        // Titel
+        JLabel titleLabel = new JLabel("Bestellungsübersicht", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        add(titleLabel, BorderLayout.NORTH);
+
+        // Tabelle
+        tableModel = new BestellungOverviewTableModel(null);
+        bestellungTable = new JTable(tableModel);
+        bestellungTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        bestellungTable.setRowHeight(25);
+
+        // Benutzerdefinierter Renderer für bedingte Formatierung
+        bestellungTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                BestellungOverviewTableModel model = (BestellungOverviewTableModel) table.getModel();
+                Bestellung bestellung = model.getBestellungAt(row);
+
+                // Debugging: Werte der Timestamps ausgeben
+                System.out.println("Zeile " + row + " - Bestellung ID: " + bestellung.getId() +
+                        ", Erfassung: " + bestellung.getErfassung() +
+                        ", Versand: " + bestellung.getVersand() +
+                        ", Lieferung: " + bestellung.getLieferung() +
+                        ", Bezahlung: " + bestellung.getBezahlung());
+
+                boolean isComplete = model.isBestellungComplete(row);
+                System.out.println("Zeile " + row + " - isBestellungComplete: " + isComplete);
+
+                if (!isSelected) {
+                    if (isComplete) {
+                        c.setBackground(new Color(144, 238, 144)); // Hellgrün
+                    } else {
+                        c.setBackground(table.getBackground()); // Standard-Hintergrundfarbe
+                    }
+                } else {
+                    // Wenn ausgewählt, grün beibehalten, aber mit angepasster Textfarbe für Lesbarkeit
+                    if (isComplete) {
+                        c.setBackground(new Color(144, 238, 144)); // Hellgrün auch bei Auswahl
+                        c.setForeground(Color.BLACK); // Textfarbe für Lesbarkeit
+                    } else {
+                        c.setBackground(table.getSelectionBackground());
+                        c.setForeground(table.getSelectionForeground());
+                    }
+                }
+                return c;
+            }
+        });
+
+        // Sicherstellen, dass alle Spalten denselben Renderer verwenden
+        for (int i = 0; i < bestellungTable.getColumnCount(); i++) {
+            bestellungTable.getColumnModel().getColumn(i).setCellRenderer(bestellungTable.getDefaultRenderer(Object.class));
+        }
+
+        JScrollPane scrollPane = new JScrollPane(bestellungTable);
+        add(scrollPane, BorderLayout.CENTER);
+
+        // Filter- und Button-Panel
+        JPanel southPanel = new JPanel(new BorderLayout());
+        
+        // Filter-Panel
+        FilterPanel filterPanel = new FilterPanel(session.getCommunicator());
+        filterPanel.setFilterListener(new FilterPanel.FilterListener() {
+            @Override
+            public void onFilter(Date startDate, Date endDate, Double minAmount, Integer productId) {
+                loadFilteredBestellungen(startDate, endDate, minAmount, productId);
+            }
+
+            @Override
+            public void onReset() {
+                loadBestellungen();
+            }
+        });
+        southPanel.add(filterPanel, BorderLayout.NORTH);
+
+        // Button-Panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton refreshButton = new JButton("Aktualisieren");
+        refreshButton.addActionListener(e -> refresh());
+        buttonPanel.add(refreshButton);
+
+        JButton detailButton = new JButton("Details anzeigen");
+        detailButton.addActionListener(e -> openDetailView());
+        buttonPanel.add(detailButton);
+
+        JButton addBestellungButton = new JButton("Bestellung hinzufügen");
+        addBestellungButton.addActionListener(e -> {
+            AddBestellung dialog = new AddBestellung(
+                (JFrame) SwingUtilities.getAncestorOfClass(JFrame.class, this), 
+                session
+            );
+            dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+            dialog.setModalityType(JDialog.ModalityType.APPLICATION_MODAL);
+            dialog.setVisible(true);
+            refresh();
+        });
+        buttonPanel.add(addBestellungButton);
+
+        southPanel.add(buttonPanel, BorderLayout.SOUTH);
+        add(southPanel, BorderLayout.SOUTH);
+
+        // Daten laden
+        loadBestellungen();
+    }
+
+    private void loadBestellungen() {
+        try {
+            List<Bestellung> bestellungen = session.getCommunicator().getBestellungen();
+            System.out.println("loadBestellungen: Anzahl geladener Bestellungen=" + (bestellungen != null ? bestellungen.size() : 0));
+            if (bestellungen == null) {
+                bestellungen = new ArrayList<>();
+                System.out.println("loadBestellungen: Bestellungen war null, leere Liste verwendet");
+            }
+            tableModel.setData(bestellungen);
+            System.out.println("loadBestellungen: Tabelle aktualisiert mit " + bestellungen.size() + " Bestellungen");
+        } catch (Exception e) {
+            System.err.println("Fehler beim Laden der Bestellungen: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Fehler beim Laden der Bestellungen: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void loadFilteredBestellungen(Date startDate, Date endDate, Double minAmount, Integer productId) {
+        try {
+            List<Bestellung> bestellungen = session.getCommunicator().getFilteredBestellungen(startDate, endDate, minAmount, productId);
+            System.out.println("loadFilteredBestellungen: Anzahl gefilterter Bestellungen=" + (bestellungen != null ? bestellungen.size() : 0));
+            if (bestellungen == null) {
+                bestellungen = new ArrayList<>();
+                System.out.println("loadFilteredBestellungen: Bestellungen war null, leere Liste verwendet");
+            }
+            tableModel.setData(bestellungen);
+            System.out.println("loadFilteredBestellungen: Tabelle aktualisiert mit " + bestellungen.size() + " Bestellungen");
+        } catch (Exception e) {
+            System.err.println("Fehler beim Laden der gefilterten Bestellungen: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Fehler beim Laden der gefilterten Bestellungen: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public void refresh() {
+        loadBestellungen();
+    }
+
+    private void openDetailView() {
+        int selectedRow = bestellungTable.getSelectedRow();
+        if (selectedRow >= 0) {
+            Bestellung selectedBestellung = tableModel.getBestellungAt(selectedRow);
+            BestellungDetailDialog detailDialog = new BestellungDetailDialog(null, session, selectedBestellung);
+            detailDialog.setVisible(true);
+            // Nach Schließen des Detail-Dialogs die Tabelle aktualisieren, um die Farbänderung widerzuspiegeln
+            refresh();
+        } else {
+            JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung aus.", "Warnung", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+}

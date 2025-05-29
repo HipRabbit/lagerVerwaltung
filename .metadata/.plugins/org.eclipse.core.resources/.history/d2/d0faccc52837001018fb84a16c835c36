@@ -1,0 +1,136 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import javax.swing.*;
+import java.awt.*;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.model.deo.Status;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+import thw.edu.javaII.port.warehouse.ui.common.Communicator;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.ui.LagerUI;
+
+public class AddProdukt extends JDialog {
+    private JTextField nameField, herstellerField, preisField, anzahlField;
+    private JComboBox<LagerPlatz> lagerPlatzComboBox;
+    private JButton saveButton, cancelButton;
+    private Communicator communicator;
+    private LagerUI lagerUI; // Neue Instanzvariable für LagerUI
+
+    public AddProdukt(Session session, LagerUI parent) {
+        super(parent, "Produkt hinzufügen", true);
+        this.lagerUI = parent;
+        this.communicator = session.getCommunicator();
+        initComponents();
+        setLocationRelativeTo(parent);
+    }
+
+    private void initComponents() {
+        setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel nameLabel = new JLabel("Name:");
+        nameField = new JTextField(20);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        add(nameLabel, gbc);
+        gbc.gridx = 1;
+        add(nameField, gbc);
+
+        JLabel herstellerLabel = new JLabel("Hersteller:");
+        herstellerField = new JTextField(20);
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        add(herstellerLabel, gbc);
+        gbc.gridx = 1;
+        add(herstellerField, gbc);
+
+        JLabel preisLabel = new JLabel("Preis:");
+        preisField = new JTextField(20);
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        add(preisLabel, gbc);
+        gbc.gridx = 1;
+        add(preisField, gbc);
+
+        JLabel anzahlLabel = new JLabel("Anzahl:");
+        anzahlField = new JTextField(10);
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        add(anzahlLabel, gbc);
+        gbc.gridx = 1;
+        add(anzahlField, gbc);
+
+        JLabel lagerPlatzLabel = new JLabel("Lagerplatz:");
+        lagerPlatzComboBox = new JComboBox<>();
+        loadFreeLagerPlatz();
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        add(lagerPlatzLabel, gbc);
+        gbc.gridx = 1;
+        add(lagerPlatzComboBox, gbc);
+
+        saveButton = new JButton("Speichern");
+        cancelButton = new JButton("Abbrechen");
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(saveButton);
+        buttonPanel.add(cancelButton);
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.gridwidth = 2;
+        add(buttonPanel, gbc);
+
+        saveButton.addActionListener(e -> saveProdukt());
+        cancelButton.addActionListener(e -> dispose());
+
+        setSize(400, 250);
+    }
+
+    private void loadFreeLagerPlatz() {
+        LagerPlatz[] freeLagerPlatz = communicator.getFreeLagerPlatz();
+        if (freeLagerPlatz != null) {
+            for (LagerPlatz lp : freeLagerPlatz) {
+                lagerPlatzComboBox.addItem(lp);
+            }
+        }
+        if (lagerPlatzComboBox.getItemCount() == 0) {
+            JOptionPane.showMessageDialog(this, "Keine freien Lagerplätze verfügbar.", "Warnung", JOptionPane.WARNING_MESSAGE);
+            saveButton.setEnabled(false);
+        }
+    }
+
+    private void saveProdukt() {
+        try {
+            String name = nameField.getText().trim();
+            String hersteller = herstellerField.getText().trim();
+            double preis = Double.parseDouble(preisField.getText().trim());
+            int anzahl = Integer.parseInt(anzahlField.getText().trim());
+            LagerPlatz lagerPlatz = (LagerPlatz) lagerPlatzComboBox.getSelectedItem();
+
+            if (name.isEmpty() || hersteller.isEmpty() || preis < 0 || anzahl <= 0 || lagerPlatz == null) {
+                JOptionPane.showMessageDialog(this, "Bitte alle Felder korrekt ausfüllen.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            Produkt produkt = new Produkt(0, name, hersteller, preis);
+            LagerBestand lagerBestand = new LagerBestand(0, anzahl, produkt, lagerPlatz);
+
+            ProduktPage produktPage = lagerUI.getProduktPage();
+            BestandPage bestandPage = lagerUI.getBestandPage();
+            ProduktOptionDialog optionDialog = new ProduktOptionDialog(this, produkt, lagerBestand, communicator, produktPage, bestandPage);
+            optionDialog.setVisible(true);
+
+            dispose();
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Ungültige Eingabe für Preis oder Anzahl.", "Fehler", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Fehler: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+}

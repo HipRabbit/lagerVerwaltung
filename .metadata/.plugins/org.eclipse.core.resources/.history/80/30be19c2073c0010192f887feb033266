@@ -1,0 +1,44 @@
+package thw.edu.javaII.port.warehouse.ui.model;
+
+import javax.swing.table.AbstractTableModel;
+import java.util.*;
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
+
+public class NachbestellungTableModel extends AbstractTableModel {
+    private static final long serialVersionUID = 1L;
+    private final String[] columnNames = {"ID", "Produkt-ID", "Produktname", "Menge", "Datum", "Lagerplatz", "Lager"};
+    private List<Nachbestellung> nachbestellungen;
+
+    public NachbestellungTableModel(List<Nachbestellung> nachbestellungen) {
+        this.nachbestellungen = (nachbestellungen != null) ? nachbestellungen : new ArrayList<>();
+    }
+
+    @Override
+    public int getRowCount() { return nachbestellungen.size(); }
+
+    @Override
+    public int getColumnCount() { return columnNames.length; }
+
+    @Override
+    public String getColumnName(int col) { return columnNames[col]; }
+
+    @Override
+    public Object getValueAt(int row, int col) {
+        Nachbestellung nb = nachbestellungen.get(row);
+        switch (col) {
+            case 0: return nb.getId();
+            case 1: return nb.getProduktId();
+            case 2: return nb.getProduktName();
+            case 3: return nb.getMenge();
+            case 4: return nb.getDatum().toString();
+            case 5: return nb.getLagerplatzId();
+            case 6: return nb.getLagerId();
+            default: return null;
+        }
+    }
+
+    public void updateData(List<Nachbestellung> newData) {
+        this.nachbestellungen = (newData != null) ? newData : new ArrayList<>();
+        fireTableDataChanged();
+    }
+}

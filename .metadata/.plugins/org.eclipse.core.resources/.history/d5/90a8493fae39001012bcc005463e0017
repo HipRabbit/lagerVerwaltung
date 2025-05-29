@@ -1,0 +1,21 @@
+package thw.edu.javaII.port.warehouse.model.deo;
+
+public enum Command {
+    ADD,
+    DELETE,
+    INIT,
+    LIST,
+    UPDATE,
+    SEARCH,
+    GETBYMODEL,
+    BESTAND,
+    TOP,
+    LOW,
+    CLOSE,
+    END,
+    GETBYID,
+    FILTER,
+    GETNEXTID,
+    ADD_WITH_BESTAND, // New command for Produkt + LagerBestand
+	NACHBESTELLUNG, NOTIFY;
+}

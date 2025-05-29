@@ -1,0 +1,145 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import java.awt.*;
+import javax.swing.*;
+import javax.swing.text.*;
+import net.miginfocom.swing.MigLayout;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+
+public class EditProdukt extends JDialog {
+    private Session ses;
+    private JTextField txtName, txtHersteller, txtPreis;
+    private JButton btnSave, btnCancel;
+    private Produkt produkt;
+
+    public EditProdukt(Session ses, JFrame parent, Produkt produkt) {
+        super(parent, "Produkt bearbeiten", true);
+        this.ses = ses;
+        this.produkt = produkt;
+        initializeUI();
+        setLocationRelativeTo(parent);
+    }
+
+    private void initializeUI() {
+        setLayout(new MigLayout("fill, wrap 2", "[right][left, grow]", "[]10[]"));
+        setSize(400, 200);
+
+        // Eingabefelder
+        add(new JLabel("Name:"));
+        txtName = new JTextField(produkt != null ? produkt.getName() : "", 20);
+        add(txtName, "growx");
+
+        add(new JLabel("Hersteller:"));
+        txtHersteller = new JTextField(produkt != null ? produkt.getHersteller() : "", 20);
+        add(txtHersteller, "growx");
+
+        add(new JLabel("Preis:"));
+        txtPreis = new JTextField(produkt != null ? String.valueOf(produkt.getPreis()) : "", 20);
+        ((AbstractDocument) txtPreis.getDocument()).setDocumentFilter(new DecimalNumberFilter("Preis"));
+        add(txtPreis, "growx");
+
+        // Buttons in einem zentrierten Panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        btnSave = new JButton("Speichern");
+        btnSave.addActionListener(e -> saveProdukt());
+        btnCancel = new JButton("Abbrechen");
+        btnCancel.addActionListener(e -> dispose());
+        buttonPanel.add(btnSave);
+        buttonPanel.add(btnCancel);
+        add(buttonPanel, "span 2, center");
+
+        if (produkt == null) {
+            btnSave.setEnabled(false);
+        }
+    }
+
+    private void saveProdukt() {
+        try {
+            if (produkt == null) {
+                JOptionPane.showMessageDialog(this, "Kein Produkt ausgewählt.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String name = txtName.getText().trim();
+            String hersteller = txtHersteller.getText().trim();
+            double preis = Double.parseDouble(txtPreis.getText().trim());
+
+            if (name.isEmpty() || hersteller.isEmpty() || preis < 0) {
+                JOptionPane.showMessageDialog(this, "Bitte füllen Sie alle Felder korrekt aus.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            produkt.setName(name);
+            produkt.setHersteller(hersteller);
+            produkt.setPreis(preis);
+
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.PRODUKT);
+            deo.setCommand(Command.UPDATE);
+            deo.setData(produkt);
+
+            WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                JOptionPane.showMessageDialog(this, "Produkt erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                dispose();
+            } else {
+                JOptionPane.showMessageDialog(this, ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Ungültiger Preis. Bitte geben Sie eine Zahl ein.", "Fehler", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Fehler: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // DocumentFilter für Dezimalzahlen (Preis)
+    private class DecimalNumberFilter extends DocumentFilter {
+        private boolean hasShownWarning = false;
+        private String fieldName;
+
+        public DecimalNumberFilter(String fieldName) {
+            this.fieldName = fieldName;
+        }
+
+        @Override
+        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
+            if (string == null) return;
+            String newText = fb.getDocument().getText(0, fb.getDocument().getLength()) + string;
+            if (newText.matches("[0-9]*\\.?[0-9]*")) {
+                super.insertString(fb, offset, string, attr);
+                hasShownWarning = false;
+            } else {
+                handleInvalidInput();
+            }
+        }
+
+        @Override
+        public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+            if (text == null) return;
+            String currentText = fb.getDocument().getText(0, fb.getDocument().getLength());
+            String newText = currentText.substring(0, offset) + text + currentText.substring(offset + length);
+            if (newText.matches("[0-9]*\\.?[0-9]*")) {
+                super.replace(fb, offset, length, text, attrs);
+                hasShownWarning = false;
+            } else {
+                handleInvalidInput();
+            }
+        }
+
+        private void handleInvalidInput() {
+            Toolkit.getDefaultToolkit().beep();
+            if (!hasShownWarning) {
+                JOptionPane.showMessageDialog(EditProdukt.this,
+                    "Nur Zahlen (z. B. 12.34) sind im Feld " + fieldName + " erlaubt.",
+                    "Ungültige Eingabe",
+                    JOptionPane.WARNING_MESSAGE);
+                hasShownWarning = true;
+            }
+        }
+    }
+}

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename local variable &apos;btnNewButton_1&apos; in &apos;thw.edu.javaII.port.warehouse.ui.panels.SearchPage.SearchPage(...)&apos; to &apos;btnSearch&apos;&#x0A;- Original project: &apos;thw.edu.javaII.port.warehouse.ui&apos;&#x0A;- Original element: &apos;thw.edu.javaII.port.warehouse.ui.panels.SearchPage.SearchPage(Session, JFrame).btnNewButton_1&apos;&#x0A;- Renamed element: &apos;btnNewButton_1&apos;&#x0A;- Update references to refactored element" description="Rename local variable &apos;btnNewButton_1&apos;" id="org.eclipse.jdt.ui.rename.local.variable" input="/src&lt;thw.edu.javaII.port.warehouse.ui.panels{SearchPage.java[SearchPage~SearchPage~QSession;~QJFrame;@btnNewButton_1!3337!3383!3345!3358!QJButton;!0!false" name="btnSearch" references="true" stamp="1715527928047" version="1.0"/>
+</session>

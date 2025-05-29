@@ -1,0 +1,90 @@
+package thw.edu.javaII.port.warehouse.server;
+
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.model.deo.Status;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.server.data.Database;
+
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.logging.Logger;
+
+public class NachbestellungService {
+    private final Database store;
+    private final Logger logger = Logger.getLogger(NachbestellungService.class.getName());
+    private final Server server;
+    private final Timer timer;
+
+    public NachbestellungService(Database store, Server server) {
+        this.store = store;
+        this.server = server;
+        this.timer = new Timer(true);
+        startInventoryCheck();
+    }
+
+    private void startInventoryCheck() {
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                checkInventoryAndTriggerReorder();
+            }
+        }, 0, 30_000); // Alle 30 Sekunden
+    }
+
+    private void checkInventoryAndTriggerReorder() {
+        List<LagerBestand> bestands = store.getLagerBestands();
+        for (LagerBestand bestand : bestands) {
+            LagerPlatz platz = bestand.getLagerplatz_id();
+            if (bestand.getAnzahl() < platz.getKapazitaet() / 2) {
+                triggerReorder(bestand, platz);
+            }
+        }
+    }
+
+    private void triggerReorder(LagerBestand bestand, LagerPlatz platz) {
+        int menge = platz.getKapazitaet() - bestand.getAnzahl();
+        Nachbestellung nachbestellung = new Nachbestellung();
+        nachbestellung.setProdukt(bestand.getProdukt_id());
+        nachbestellung.setMenge(menge);
+        nachbestellung.setLagerplatz(platz);
+        nachbestellung.setStatus("ausgelöst");
+
+        store.addNachbestellung(nachbestellung);
+
+        TimerTask deliveryTask = new TimerTask() {
+            @Override
+            public void run() {
+                deliverReorder(nachbestellung, bestand);
+            }
+        };
+        timer.schedule(deliveryTask, 160_000); // 160 Sekunden Verzögerung
+    }
+
+    private void deliverReorder(Nachbestellung nachbestellung, LagerBestand bestand) {
+        synchronized (store) {
+            bestand.setAnzahl(bestand.getAnzahl() + nachbestellung.getMenge());
+            store.updateLagerBestand(bestand);
+            nachbestellung.setStatus("eingetroffen");
+            store.addNachbestellung(nachbestellung); // Aktualisiert die Nachbestellung
+
+            // Globale Nachricht an alle Clients
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.NACHBESTELLUNG);
+            deo.setCommand(Command.NOTIFY);
+            deo.setData("Nachbestellung eingetroffen: " + nachbestellung.getProdukt().getName() + ", Menge: " + nachbestellung.getMenge());
+            WarehouseReturnDEO response = new WarehouseReturnDEO(null, "Benachrichtigung gesendet", Status.OK);
+            server.broadcast(deo, response);
+        }
+    }
+
+    public void shutdown() {
+        timer.cancel();
+    }
+}

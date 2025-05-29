@@ -1,0 +1,52 @@
+package thw.edu.javaII.port.warehouse.server;
+
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+import thw.edu.javaII.port.warehouse.model.common.Info;
+import thw.edu.javaII.port.warehouse.server.data.Persistence;
+import thw.edu.javaII.port.warehouse.server.data.Storage;
+
+public class Server {
+	public static boolean run = true;
+	
+	public static void main(String[] args) {
+		Persistence pers = new Persistence();
+		Storage store = pers.read();
+		ServerSocket server = null;
+		try {		
+			server = new ServerSocket(Info.PORT_SERVER);
+			System.out.println("Lagerverwaltungsserver läuft");
+			while (run) {
+				Socket sock = server.accept();
+				new Service(sock, store).start();
+			}
+		}  catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (server != null) {
+				try {
+					server.close();
+				} catch (IOException e) {
+					;
+				}
+			}
+			pers.write(store);
+		}
+	}
+	
+	///TODO Gruppenanforderung 1 umsetzten
+	///TODO Gruppenanforderung 2 umsetzten
+	///TODO Gruppenanforderung 3 umsetzten
+	///TODO Gruppenanforderung 4 umsetzten
+	///TODO Gruppenanforderung 5 umsetzten
+	///TODO Gruppenanforderung 6 umsetzten
+	///TODO Exception Handling durchziehen
+	///TODO Datenbankanbindung aufnehmen
+	///TODO Datenanbindung gegen ein Interface implementieren
+	///TODO Rest-Service mit aufnehmen
+	///TODO Beispiel für REST API Call https://openliberty.io/guides/rest-client-java.html#starting-the-service
+	
+	
+}

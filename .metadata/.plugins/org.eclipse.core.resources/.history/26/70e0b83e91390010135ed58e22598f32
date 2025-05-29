@@ -1,0 +1,153 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import javax.swing.*;
+import java.awt.*;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
+
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.ui.model.BestandTableModel;
+
+public class BestandPage extends JPanel {
+
+    private static final long serialVersionUID = 2848864973063147806L;
+    private JTable table;
+    private BestandTableModel tableModel;
+    private Session ses;
+    private JLabel totalValueLabel;
+
+    public BestandPage(Session ses) {
+        this.ses = ses;
+        setLayout(new BorderLayout(0, 0));
+        initializeUI();
+    }
+
+    private void initializeUI() {
+        JPanel topPanel = new JPanel(new BorderLayout());
+        JLabel lblTitle = new JLabel("Lagerbestand");
+        lblTitle.setFont(new Font("Lucida Grande", Font.BOLD, 16));
+        topPanel.add(lblTitle, BorderLayout.NORTH);
+
+        JPanel sortPanel = new JPanel();
+        sortPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        JToggleButton sortByIdButton = new JToggleButton("Sortieren nach ID");
+        JToggleButton sortByNameButton = new JToggleButton("Sortieren nach Name");
+
+        sortByIdButton.addActionListener(e -> {
+            boolean ascending = !sortByIdButton.isSelected();
+            tableModel.sortById(ascending);
+            sortByIdButton.setText(ascending ? "Sortieren nach ID ↑" : "Sortieren nach ID ↓");
+            sortByNameButton.setSelected(false);
+            sortByNameButton.setText("Sortieren nach Name");
+            updateSortIndicator(0, ascending); // Spalte 0 (ID)
+        });
+
+        sortByNameButton.addActionListener(e -> {
+            boolean ascending = !sortByNameButton.isSelected();
+            tableModel.sortByName(ascending);
+            sortByNameButton.setText(ascending ? "Sortieren nach Name ↑" : "Sortieren nach Name ↓");
+            sortByIdButton.setSelected(false);
+            sortByIdButton.setText("Sortieren nach ID");
+            updateSortIndicator(1, ascending); // Spalte 1 (Produkt)
+        });
+
+        sortPanel.add(sortByIdButton);
+        sortPanel.add(sortByNameButton);
+        topPanel.add(sortPanel, BorderLayout.CENTER);
+
+        add(topPanel, BorderLayout.NORTH);
+
+        tableModel = new BestandTableModel(ses.getCommunicator().getBestand());
+        table = new JTable(tableModel);
+        tableModel.setJTableColumnsWidth(table, 800, 10, 20, 20, 10, 20, 20);
+        table.setShowGrid(true);
+        table.setShowVerticalLines(true);
+        table.setShowHorizontalLines(true);
+        table.setGridColor(Color.DARK_GRAY);
+        table.getTableHeader().setDefaultRenderer(new SortIndicatorHeaderRenderer(table.getTableHeader().getDefaultRenderer()));
+        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        // Button-Panel mit links ausgerichtetem Label und rechts ausgerichteten Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        totalValueLabel = new JLabel("Gesamtwert des Bestands: 0,00 €");
+        totalValueLabel.setFont(new Font("Lucida Grande", Font.PLAIN, 14));
+        buttonPanel.add(totalValueLabel);
+
+        // Buttons rechts ausrichten
+        JPanel buttonRightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton editButton = new JButton("Bestand bearbeiten");
+        editButton.addActionListener(e -> editBestand());
+        buttonRightPanel.add(editButton);
+
+        JButton refreshButton = new JButton("Aktualisieren");
+        refreshButton.addActionListener(e -> refresh());
+        buttonRightPanel.add(refreshButton);
+
+        buttonPanel.add(buttonRightPanel);
+
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        refresh();
+        updateTotalValue();
+    }
+
+    private void editBestand() {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow >= 0) {
+            LagerBestand selectedBestand = tableModel.getData().get(selectedRow);
+            String input = JOptionPane.showInputDialog(this, 
+                "Neue Menge für " + selectedBestand.getProdukt_id().getName() + " eingeben:", 
+                selectedBestand.getAnzahl());
+            if (input != null) {
+                try {
+                    int neueAnzahl = Integer.parseInt(input);
+                    if (neueAnzahl < 0) {
+                        JOptionPane.showMessageDialog(this, "Die Menge darf nicht negativ sein!", 
+                            "Eingabefehler", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    selectedBestand.setAnzahl(neueAnzahl);
+                    boolean success = ses.getCommunicator().updateLagerBestand(selectedBestand) != null;
+                    if (success) {
+                        JOptionPane.showMessageDialog(this, "Bestand erfolgreich aktualisiert!", 
+                            "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                        refresh();
+                        updateTotalValue();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Bestands!", 
+                            "Fehler", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Bitte geben Sie eine gültige Zahl ein!", 
+                        "Eingabefehler", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Bestand aus.", 
+                "Warnung", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    public void refresh() {
+        tableModel.setData(null); // Daten zurücksetzen
+        tableModel.setData(ses.getCommunicator().getBestand()); // Neue Daten laden
+        updateTotalValue();
+    }
+
+    private void updateTotalValue() {
+        double totalValue = ses.getCommunicator().calculateTotalInventoryValue();
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.GERMAN);
+        symbols.setDecimalSeparator(',');
+        symbols.setGroupingSeparator('.');
+        DecimalFormat df = new DecimalFormat("#,##0.00 €", symbols);
+        totalValueLabel.setText("Gesamtwert des Bestands: " + df.format(totalValue));
+    }
+
+    private void updateSortIndicator(int columnIndex, boolean ascending) {
+        SortIndicatorHeaderRenderer renderer = (SortIndicatorHeaderRenderer) table.getTableHeader().getDefaultRenderer();
+        renderer.setSortColumn(columnIndex, ascending);
+        table.getTableHeader().repaint();
+    }
+}

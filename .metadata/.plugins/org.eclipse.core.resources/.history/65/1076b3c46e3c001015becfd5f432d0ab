@@ -1,0 +1,7 @@
+package thw.edu.javaII.port.warehouse.ui;
+
+public enum MenuActionCommands {
+    BEENDEN, STARTSEITE, SERVERBEENDEN, BESTAND, STATISTIK, SUCHEN, INFO, KUNDEN_DATENBANK,
+    BESTELLUNG_PAGE, LAGER, LAGERPLATZ, PRODUKT, DATENBANK // Neuer Befehl
+, NACHBESTELLUNG
+}

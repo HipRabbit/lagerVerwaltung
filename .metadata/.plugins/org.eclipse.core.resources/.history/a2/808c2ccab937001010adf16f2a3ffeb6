@@ -1,0 +1,119 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import java.awt.*;
+import javax.swing.*;
+import net.miginfocom.swing.MigLayout;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.model.BestellungProdukt;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.model.common.Cast;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+
+public class DeleteProdukt extends JDialog {
+    private Session ses;
+    private Produkt produkt;
+    private JButton btnDelete, btnCancel;
+
+    public DeleteProdukt(Session ses, JFrame parent, Produkt produkt) {
+        super(parent, "Produkt löschen", true);
+        this.ses = ses;
+        this.produkt = produkt;
+        initializeUI();
+        setLocationRelativeTo(parent);
+    }
+
+    private void initializeUI() {
+        setLayout(new MigLayout("fill, wrap 2", "[right][grow]", ""));
+        setSize(400, 150);
+
+        // Produkt anzeigen
+        add(new JLabel("Produkt:"));
+        add(new JLabel(produkt != null ? produkt.getName() : "Kein Produkt ausgewählt"));
+
+        // Buttons
+        btnDelete = new JButton("Löschen");
+        btnDelete.addActionListener(e -> deleteProdukt());
+        btnCancel = new JButton("Abbrechen");
+        btnCancel.addActionListener(e -> dispose());
+        add(btnDelete, "split 2, right");
+        add(btnCancel);
+
+        if (produkt == null) {
+            btnDelete.setEnabled(false);
+        }
+    }
+
+    private void deleteProdukt() {
+        try {
+            if (produkt == null) {
+                JOptionPane.showMessageDialog(this, "Kein Produkt ausgewählt.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Prüfen, ob das Produkt in Bestellungen verwendet wird
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.BESTELLUNG);
+            deo.setCommand(Command.LIST);
+            WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                java.util.List<thw.edu.javaII.port.warehouse.model.Bestellung> bestellungList = Cast.safeListCast(ret.getData(), thw.edu.javaII.port.warehouse.model.Bestellung.class);
+                if (bestellungList != null && bestellungList.stream()
+                        .flatMap(b -> b.getProdukte().stream())
+                        .anyMatch(bp -> bp.getProdukt().getId() == produkt.getId())) {
+                    JOptionPane.showMessageDialog(this, "Produkt kann nicht gelöscht werden, da es in Bestellungen verwendet wird.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
+
+            // Prüfen, ob das Produkt in Lagerbeständen verwendet wird, und diese ggf. löschen
+            deo = new WarehouseDEO();
+            deo.setZone(Zone.LAGERBESTAND);
+            deo.setCommand(Command.LIST);
+            ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                java.util.List<LagerBestand> bestandList = Cast.safeListCast(ret.getData(), LagerBestand.class);
+                if (bestandList != null) {
+                    for (LagerBestand bestand : bestandList) {
+                        if (bestand.getProdukt_id().getId() == produkt.getId()) {
+                            // Lagerbestand-Eintrag löschen
+                            WarehouseDEO deleteDeo = new WarehouseDEO();
+                            deleteDeo.setZone(Zone.LAGERBESTAND);
+                            deleteDeo.setCommand(Command.DELETE);
+                            deleteDeo.setData(bestand);
+                            WarehouseReturnDEO deleteRet = ses.getCommunicator().sendRequest(deleteDeo);
+                            if (deleteRet.getStatus() != thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                                JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Lagerbestands: " + deleteRet.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie das Produkt '" + produkt.getName() + "' wirklich löschen?", "Bestätigung", JOptionPane.YES_NO_OPTION);
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+
+            // Produkt löschen
+            deo = new WarehouseDEO();
+            deo.setZone(Zone.PRODUKT);
+            deo.setCommand(Command.DELETE);
+            deo.setData(produkt);
+
+            ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                JOptionPane.showMessageDialog(this, "Produkt erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                dispose();
+            } else {
+                JOptionPane.showMessageDialog(this, ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Fehler: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+}

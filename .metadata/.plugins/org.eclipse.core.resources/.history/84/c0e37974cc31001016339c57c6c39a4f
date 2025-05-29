@@ -1,0 +1,54 @@
+package thw.edu.javaII.port.warehouse.model;
+
+import java.io.Serializable;
+
+public class Kunde implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private int id;
+    private String name;
+    private String lieferadresse;
+    private String rechnungsadresse;
+
+    public Kunde() {
+    }
+
+    public Kunde(int id, String name, String lieferadresse, String rechnungsadresse) {
+        this.id = id;
+        this.name = name;
+        this.lieferadresse = lieferadresse;
+        this.rechnungsadresse = rechnungsadresse;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getLieferadresse() {
+        return lieferadresse;
+    }
+
+    public void setLieferadresse(String lieferadresse) {
+        this.lieferadresse = lieferadresse;
+    }
+
+    public String getRechnungsadresse() {
+        return rechnungsadresse;
+    }
+
+    public void setRechnungsadresse(String rechnungsadresse) {
+        this.rechnungsadresse = rechnungsadresse;
+    }
+}
