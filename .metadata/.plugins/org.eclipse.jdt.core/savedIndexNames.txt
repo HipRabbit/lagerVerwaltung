@@ -1,5 +1,6 @@
-INDEX VERSION 1.134+C:\Users\lenna\katze\.metadata\.plugins\org.eclipse.jdt.core
-1113086728.index
-1060465640.index
-427331379.index
-1532235585.index
+INDEX VERSION 1.134+/Users/paulhartmann/Stockify/Stockify/.metadata/.plugins/org.eclipse.jdt.core
+2652616236.index
+2425406970.index
+2420634664.index
+1865797976.index
+2789042842.index
