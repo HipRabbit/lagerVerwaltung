@@ -4,12 +4,23 @@ import javax.swing.*;
 import java.awt.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import thw.edu.javaII.port.warehouse.model.LagerBestand;
 import thw.edu.javaII.port.warehouse.ui.common.Session;
 import thw.edu.javaII.port.warehouse.ui.model.BestandTableModel;
-
+/**
+ * Ein JPanel zur Anzeige und Verwaltung des Lagerbestands.
+ * Enthält eine Tabelle mit Lagerbestandsdaten, Sortieroptionen, Bearbeitungs- und Aktualisierungsfunktionen.
+ * Zeigt den Gesamtwert des Bestands an.
+ *
+ * @author [Lennart Höpfner]
+ * @version 1.0
+ * @since 2025-06-01
+ */
 public class BestandPage extends JPanel {
 
     private static final long serialVersionUID = 2848864973063147806L;
@@ -22,8 +33,13 @@ public class BestandPage extends JPanel {
         this.ses = ses;
         setLayout(new BorderLayout(0, 0));
         initializeUI();
-    }
 
+        // Standard-Sortierung nach ID aufsteigend nach dem Laden der Daten
+        tableModel.sortById(true);
+    }
+    /**
+     * Initialisiert die Benutzeroberfläche mit Titel, Tabelle, Sortierbuttons und Buttons für Bearbeiten und Aktualisieren.
+     */
     private void initializeUI() {
         JPanel topPanel = new JPanel(new BorderLayout());
         JLabel lblTitle = new JLabel("Lagerbestand");
@@ -61,7 +77,7 @@ public class BestandPage extends JPanel {
 
         tableModel = new BestandTableModel(ses.getCommunicator().getBestand());
         table = new JTable(tableModel);
-        tableModel.setJTableColumnsWidth(table, 800, 10, 20, 20, 10, 20, 20);
+        tableModel.setJTableColumnsWidth(table, 800, 10, 20, 15, 10, 15, 15, 10, 15); // Anpassung für 8 Spalten
         table.setShowGrid(true);
         table.setShowVerticalLines(true);
         table.setShowHorizontalLines(true);
@@ -92,6 +108,10 @@ public class BestandPage extends JPanel {
         refreshButton.addActionListener(e -> refresh());
         buttonCenterPanel.add(refreshButton);
 
+        JButton inventurButton = new JButton("Inventur erstellen");
+        inventurButton.addActionListener(e -> createInventur());
+        buttonCenterPanel.add(inventurButton);
+
         gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.CENTER; // Zentriert ausrichten
@@ -103,7 +123,10 @@ public class BestandPage extends JPanel {
         refresh();
         updateTotalValue();
     }
-
+    /**
+     * Öffnet ein Dialogfenster zum Bearbeiten des ausgewählten Lagerbestands.
+     * Aktualisiert den Bestand nach erfolgreicher Änderung.
+     */
     private void editBestand() {
         int selectedRow = table.getSelectedRow();
         if (selectedRow >= 0) {
@@ -140,13 +163,17 @@ public class BestandPage extends JPanel {
                 "Warnung", JOptionPane.WARNING_MESSAGE);
         }
     }
-
+    /**
+     * Lädt die aktuellen Lagerbestandsdaten neu und aktualisiert die Anzeige.
+     */
     public void refresh() {
         tableModel.setData(null); // Daten zurücksetzen
         tableModel.setData(ses.getCommunicator().getBestand()); // Neue Daten laden
         updateTotalValue();
     }
-
+    /**
+     * Aktualisiert das Label mit dem Gesamtwert des Lagerbestands basierend auf den aktuellen Daten.
+     */
     private void updateTotalValue() {
         double totalValue = ses.getCommunicator().calculateTotalInventoryValue();
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.GERMAN);
@@ -155,10 +182,102 @@ public class BestandPage extends JPanel {
         DecimalFormat df = new DecimalFormat("#,##0.00 €", symbols);
         totalValueLabel.setText("Gesamtwert des Bestands: " + df.format(totalValue));
     }
-
+    /**
+     * Aktualisiert das Sortier-Indikator-Symbol in der Tabellenüberschrift.
+     *
+     * @param columnIndex Der Index der sortierten Spalte.
+     * @param ascending   `true`, wenn aufsteigend sortiert, `false` für absteigend.
+     */
     private void updateSortIndicator(int columnIndex, boolean ascending) {
         SortIndicatorHeaderRenderer renderer = (SortIndicatorHeaderRenderer) table.getTableHeader().getDefaultRenderer();
         renderer.setSortColumn(columnIndex, ascending);
         table.getTableHeader().repaint();
+    }
+
+    private void createInventur() {
+        try {
+            List<LagerBestand> inventurList = ses.getCommunicator().createInventur();
+            System.out.println("Inventur empfangen: Anzahl Einträge = " + (inventurList != null ? inventurList.size() : 0));
+            if (inventurList != null && !inventurList.isEmpty()) {
+                // Zuerst die Erfolgsmeldung anzeigen (blockiert den Thread)
+                JOptionPane.showMessageDialog(this, "Inventur erfolgreich erstellt!", 
+                    "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                // Danach das Inventur-Fenster anzeigen
+                showInventurWindow(inventurList);
+            } else {
+                System.out.println("Inventur fehlgeschlagen: Keine Daten empfangen");
+                JOptionPane.showMessageDialog(this, "Fehler bei der Inventur: Keine Daten erhalten.", 
+                    "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (Exception e) {
+            System.err.println("Fehler bei der Inventur: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Fehler bei der Inventur: " + e.getMessage(), 
+                "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void showInventurWindow(List<LagerBestand> inventurList) {
+        // Neues Fenster erstellen
+        JFrame inventurFrame = new JFrame("Inventur - Lagerbestand");
+        inventurFrame.setSize(800, 600);
+        inventurFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        inventurFrame.setLayout(new BorderLayout());
+
+        // Panel für Titel und Datum oben
+        JPanel northPanel = new JPanel(new BorderLayout());
+        
+        // Titel links
+        JLabel titleLabel = new JLabel("Inventur: Lagerbestand", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Lucida Grande", Font.BOLD, 16));
+        northPanel.add(titleLabel, BorderLayout.CENTER);
+
+        // Datum und Uhrzeit rechts (ohne Zeitzone)
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMAN);
+        String currentDateTime = dateFormat.format(new Date()); // Aktuelles Datum und Uhrzeit
+        JLabel dateTimeLabel = new JLabel(currentDateTime);
+        dateTimeLabel.setFont(new Font("Lucida Grande", Font.PLAIN, 12));
+        dateTimeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        northPanel.add(dateTimeLabel, BorderLayout.EAST);
+
+        inventurFrame.add(northPanel, BorderLayout.NORTH);
+
+        // Tabelle für die Inventur-Daten erstellen
+        BestandTableModel inventurTableModel = new BestandTableModel(inventurList);
+        JTable inventurTable = new JTable(inventurTableModel);
+        inventurTableModel.setJTableColumnsWidth(inventurTable, 800, 10, 20, 15, 10, 15, 15, 10, 15); // Anpassung für 8 Spalten
+        inventurTable.setShowGrid(true);
+        inventurTable.setShowVerticalLines(true);
+        inventurTable.setShowHorizontalLines(true);
+        inventurTable.setGridColor(Color.DARK_GRAY);
+
+        // Tabelle in ScrollPane einfügen
+        JScrollPane scrollPane = new JScrollPane(inventurTable);
+        inventurFrame.add(scrollPane, BorderLayout.CENTER);
+
+        // Gesamtwert der Inventur berechnen und anzeigen
+        double totalValue = calculateInventurTotalValue(inventurList);
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.GERMAN);
+        symbols.setDecimalSeparator(',');
+        symbols.setGroupingSeparator('.');
+        DecimalFormat df = new DecimalFormat("#,##0.00 €", symbols);
+        JLabel totalValueLabel = new JLabel("Gesamtwert der Inventur: " + df.format(totalValue));
+        totalValueLabel.setFont(new Font("Lucida Grande", Font.PLAIN, 14));
+        totalValueLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        inventurFrame.add(totalValueLabel, BorderLayout.SOUTH);
+
+        // Fenster anzeigen
+        inventurFrame.setLocationRelativeTo(this);
+        inventurFrame.setVisible(true);
+    }
+
+    private double calculateInventurTotalValue(List<LagerBestand> inventurList) {
+        double totalValue = 0.0;
+        for (LagerBestand lb : inventurList) {
+            if (lb.getProdukt_id() != null) {
+                totalValue += lb.getProdukt_id().getPreis() * lb.getAnzahl();
+            }
+        }
+        return totalValue;
     }
 }

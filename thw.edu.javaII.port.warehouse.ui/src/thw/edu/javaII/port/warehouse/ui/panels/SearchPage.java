@@ -30,8 +30,10 @@ public class SearchPage extends JPanel {
     private JTextField textField;
     private JScrollPane js;
     private BestandTableModel model;
+    private Session session;
 
     public SearchPage(Session ses, JFrame parent) {
+    	this.session = ses;
         setLayout(new BorderLayout(0, 0));
 
         JLabel lblNewLabel = new JLabel("Suche");
@@ -76,6 +78,14 @@ public class SearchPage extends JPanel {
             }
         });
         panel_1.add(btnSearch);
+        
+        JButton btnReset = new JButton("Zurücksetzen");
+        btnReset.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                resetSearch();
+            }
+        });
+        panel_1.add(btnReset);
 
         JLabel lblNewLabel_1 = new JLabel("Ergebnisse");
         GridBagConstraints gbc_lblNewLabel_1 = new GridBagConstraints();
@@ -98,5 +108,19 @@ public class SearchPage extends JPanel {
         gbc_table.gridy = 2;
         gbc_table.weighty = 1.0;
         panel.add(js, gbc_table);
+    }
+    private void resetSearch() {
+        textField.setText(""); // Textfeld leeren
+        try {
+            List<LagerBestand> fullBestand = session.getCommunicator().getBestand();
+            model.setData(fullBestand);
+            model.fireTableDataChanged();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim Zurücksetzen: " + e.getMessage(),
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+        textField.requestFocusInWindow(); // Fokus zurück auf Textfeld
     }
 }

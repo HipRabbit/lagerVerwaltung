@@ -1,6 +1,7 @@
 package thw.edu.javaII.port.warehouse.ui.panels;
 
 import thw.edu.javaII.port.warehouse.model.Bestellung;
+import thw.edu.javaII.port.warehouse.model.BestellungProdukt;
 import thw.edu.javaII.port.warehouse.ui.LagerUI;
 import thw.edu.javaII.port.warehouse.ui.common.Session;
 import thw.edu.javaII.port.warehouse.ui.model.BestellungTableModel;
@@ -10,6 +11,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -89,12 +91,9 @@ public class BestellungDetailDialog extends JDialog {
 
         DecimalFormat df = new DecimalFormat("#,##0.00");
         DefaultTableCellRenderer priceRenderer = new DefaultTableCellRenderer() {
-            /**
-			 * 
-			 */
-			private static final long serialVersionUID = -5600707399487239230L;
+            private static final long serialVersionUID = -5600707399487239230L;
 
-			@Override
+            @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 if (value instanceof Double) {
                     value = df.format(value) + " €";
@@ -110,7 +109,11 @@ public class BestellungDetailDialog extends JDialog {
         add(scrollPane, BorderLayout.CENTER);
 
         JPanel buttonPanel = new JPanel(new BorderLayout());
-        double gesamtpreis = bestellung.getProdukte().stream()
+        List<BestellungProdukt> produkte = bestellung.getProdukte();
+        if (produkte == null) {
+            produkte = new ArrayList<>();
+        }
+        double gesamtpreis = produkte.stream()
                 .mapToDouble(bp -> bp.getProdukt().getPreis() * bp.getAnzahl())
                 .sum();
         JLabel gesamtpreisLabel = new JLabel(String.format("Gesamtpreis: %s €", df.format(gesamtpreis)));
@@ -161,8 +164,26 @@ public class BestellungDetailDialog extends JDialog {
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
+    private boolean areAllTimestampsSet() {
+        return bestellung.getErfassung() != null &&
+               bestellung.getVersand() != null &&
+               bestellung.getLieferung() != null &&
+               bestellung.getBezahlung() != null;
+    }
+
     private void setTimestamp(String type) {
         try {
+            if (areAllTimestampsSet()) {
+                int result = JOptionPane.showConfirmDialog(this,
+                        "Alle Timestamps sind bereits gesetzt. Möchten Sie den Timestamp wirklich ändern?",
+                        "Timestamp ändern",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                if (result != JOptionPane.YES_OPTION) {
+                    return; // Abbrechen, wenn der Benutzer "Nein" wählt
+                }
+            }
+
             Date now = new Date();
             SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
             switch (type) {
@@ -171,6 +192,14 @@ public class BestellungDetailDialog extends JDialog {
                     erfassungLabel.setText(sdf.format(now));
                     break;
                 case "versand":
+                    // Zurücksetzen von Lieferung und Bezahlung, wenn Versand neu gesetzt wird
+                    if (bestellung.getLieferung() != null || bestellung.getBezahlung() != null) {
+                        bestellung.setLieferung(null);
+                        bestellung.setBezahlung(null);
+                        lieferungLabel.setText("Nicht gesetzt");
+                        bezahlungLabel.setText("Nicht gesetzt");
+                        hasChanges = true; // Änderungen markieren
+                    }
                     bestellung.setVersand(now);
                     versandLabel.setText(sdf.format(now));
                     break;
@@ -197,7 +226,11 @@ public class BestellungDetailDialog extends JDialog {
                 if (success) {
                     JOptionPane.showMessageDialog(this, "Änderungen erfolgreich gespeichert!", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                     if (getOwner() instanceof LagerUI) {
-                        ((LagerUI) getOwner()).refreshBestellungPage();
+                        LagerUI lagerUI = (LagerUI) getOwner();
+                        Component currentPanel = lagerUI.getContentPane().getComponent(0);
+                        if (currentPanel instanceof BestellungPage) {
+                            ((BestellungPage) currentPanel).updateTable();
+                        }
                     }
                     dispose();
                 } else {

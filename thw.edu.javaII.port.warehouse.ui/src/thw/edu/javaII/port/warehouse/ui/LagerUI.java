@@ -1,7 +1,6 @@
 package thw.edu.javaII.port.warehouse.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
@@ -20,6 +19,11 @@ import javax.swing.border.EmptyBorder;
 import thw.edu.javaII.port.warehouse.ui.common.Session;
 import thw.edu.javaII.port.warehouse.ui.panels.*;
 
+/**
+ * Hauptfenster der Lagerverwaltungs-Benutzeroberfläche.
+ *
+ * @author Lennart Höpfner
+ */
 public class LagerUI extends JFrame {
 
     private static final long serialVersionUID = -5670441158631808726L;
@@ -29,10 +33,14 @@ public class LagerUI extends JFrame {
     private JMenuBar menuBar;
     private JMenu menuDatei;
     private JMenuItem miBeenden, miStartseite, miServerBeenden, miBestand, miStatistik, miSuchen, miInfo, miLager, miProdukt,
-                      miKundenDatenbank, miBestellungPage, miLagerPlatz, miDatenbank, miReorder;
-                   
+                      miKundenDatenbank, miBestellungPage, miLagerPlatz, miDatenbank, miNachbestellung;
     private JLabel lblCopyright;
 
+    /**
+     * Startet die Lagerverwaltungs-Benutzeroberfläche im Event-Dispatch-Thread.
+     *
+     * @param ses die {@link Session} für die Benutzerinteraktion
+     */
     public static void run(Session ses) {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
@@ -46,6 +54,11 @@ public class LagerUI extends JFrame {
         });
     }
 
+    /**
+     * Konstruktor für die Lagerverwaltungs-Benutzeroberfläche.
+     *
+     * @param ses die {@link Session} für die Benutzerinteraktion
+     */
     public LagerUI(Session ses) {
         this.ses = ses;
         parent = this;
@@ -59,11 +72,13 @@ public class LagerUI extends JFrame {
         contentPane.setLayout(new BorderLayout(0, 0));
         setContentPane(contentPane);
         contentPane.add(new WelcomePage(), BorderLayout.CENTER);
-        new ReorderService(ses.getCommunicator());
         generateMenu();
         generateFooter();
     }
 
+    /**
+     * Generiert den Footer mit Copyright-Informationen.
+     */
     private void generateFooter() {
         pnCopyright = new JPanel();
         FlowLayout fl_pnCopyright = (FlowLayout) pnCopyright.getLayout();
@@ -76,6 +91,9 @@ public class LagerUI extends JFrame {
         pnCopyright.add(lblCopyright);
     }
 
+    /**
+     * Generiert die Menüleiste mit allen Menüpunkten und deren ActionListener.
+     */
     private void generateMenu() {
         menuBar = new JMenuBar();
         
@@ -103,16 +121,12 @@ public class LagerUI extends JFrame {
         miLager.setPreferredSize(new Dimension(160, miLager.getPreferredSize().height));
         miLager.setActionCommand(MenuActionCommands.LAGER.toString());
         miLager.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
-        
-
 
         // Lagerplatz-Menü
-
         miLagerPlatz = new JMenuItem("Lagerplatz");
         miLagerPlatz.setPreferredSize(new Dimension(160, miLagerPlatz.getPreferredSize().height));
         miLagerPlatz.setActionCommand(MenuActionCommands.LAGERPLATZ.toString());
         miLagerPlatz.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
-        
 
         // Produkt-Menü
         miProdukt = new JMenuItem("Produkte");
@@ -120,14 +134,13 @@ public class LagerUI extends JFrame {
         miProdukt.setActionCommand(MenuActionCommands.PRODUKT.toString());
         miProdukt.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
         
-        miReorder = new JMenuItem("Nachbestellung");
-        miReorder.setPreferredSize(new Dimension(160, miReorder.getPreferredSize().height));
-        miReorder.setActionCommand(MenuActionCommands.REORDER_PAGE.toString());
-        miReorder.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
-
+        miNachbestellung = new JMenuItem ("Nachbestellung");
+        miNachbestellung.setPreferredSize(new Dimension(160, miNachbestellung.getPreferredSize().height));
+        miNachbestellung.setActionCommand(MenuActionCommands.NACHBESTELLUNG.toString());
+        miNachbestellung.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
 
         // Bestehende Menüpunkte
-        miBestand = new JMenuItem("Bestand");
+        miBestand = new JMenuItem("Lagerbestand");
         miBestand.addActionListener(new LagerUIHandler(ses, this, contentPane, parent));
         miBestand.setActionCommand(MenuActionCommands.BESTAND.toString());
         miBestand.setPreferredSize(new Dimension(160, miBestand.getPreferredSize().height));
@@ -166,14 +179,7 @@ public class LagerUI extends JFrame {
         menuBar.add(miSuchen);
         menuBar.add(miKundenDatenbank);
         menuBar.add(miBestellungPage);
-        menuBar.add(miReorder);
+        menuBar.add(miNachbestellung);
         menuBar.add(miInfo);
-    }
-
-    public void refreshBestellungPage() {
-        Component centerComponent = contentPane.getComponent(1);
-        if (centerComponent instanceof BestellungPage) {
-            ((BestellungPage) centerComponent).refresh();
-        }
     }
 }

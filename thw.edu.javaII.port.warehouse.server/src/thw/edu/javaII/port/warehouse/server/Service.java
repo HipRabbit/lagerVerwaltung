@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -20,7 +21,6 @@ import thw.edu.javaII.port.warehouse.model.Lager;
 import thw.edu.javaII.port.warehouse.model.LagerBestand;
 import thw.edu.javaII.port.warehouse.model.LagerPlatz;
 import thw.edu.javaII.port.warehouse.model.Produkt;
-import thw.edu.javaII.port.warehouse.model.Reorder;
 import thw.edu.javaII.port.warehouse.model.Kunde;
 import thw.edu.javaII.port.warehouse.model.Bestellung;
 import thw.edu.javaII.port.warehouse.model.FilterCriteria;
@@ -88,8 +88,8 @@ public class Service extends Thread {
                     case BESTELLUNG: //Neu
                         deoOut = handleZoneBestellung(deoIn, deoOut);
                         break;
-                    case REORDER:
-                        deoOut = handleZoneReorder(deoIn, deoOut);
+                    case NACHBESTELLUNG:
+                        deoOut = handleZoneNachbestellung(deoIn, deoOut);
                         break;
                     default:
                         deoOut = new WarehouseReturnDEO(null, "Unbekannte Zone", Status.ERROR);
@@ -238,6 +238,24 @@ public class Service extends Thread {
                     deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
                 }
                 break;
+            case SEARCH:
+                if (deoIn.getData() instanceof Integer) {
+                    int id = Cast.safeCast(deoIn.getData(), Integer.class);
+                    try {
+                        Lager lager = ((Database) store).getLagerById(id);
+                        if (lager != null && lager.getId() > 0) {
+                            deoOut = new WarehouseReturnDEO(lager, "Lager mit ID " + id + " gefunden", Status.OK);
+                        } else {
+                            deoOut = new WarehouseReturnDEO(null, "Lager mit ID " + id + " nicht gefunden", Status.ERROR);
+                        }
+                    } catch (SQLException e) {
+                        logger.log(Level.ERROR, "Failed to search Lager ID " + id + ": " + e.getMessage());
+                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Suchen des Lagers: " + e.getMessage(), Status.ERROR);
+                    }
+                } else {
+                    deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
+                }
+                break;
             default:
                 deoOut = new WarehouseReturnDEO(null, "Unbekanntes Kommando", Status.ERROR);
                 break;
@@ -250,8 +268,15 @@ public class Service extends Thread {
             case ADD:
                 if (deoIn.getData() != null && deoIn.getData() instanceof LagerPlatz) {
                     LagerPlatz l = Cast.safeCast(deoIn.getData(), LagerPlatz.class);
-                    store.addLagerPlatz(l);
-                    deoOut = new WarehouseReturnDEO(null, "Lagerplatz erfolgreich angelegt", Status.OK);
+                    try {
+                        int newId = store.getNextLagerPlatzId(); // Neue ID von Database holen
+                        l.setId(newId); // ID serverseitig setzen
+                        store.addLagerPlatz(l);
+                        deoOut = new WarehouseReturnDEO(l, "Lagerplatz erfolgreich angelegt mit ID: " + newId, Status.OK);
+                    } catch (RuntimeException e) {
+                        logger.log(Level.ERROR, "Failed to add LagerPlatz: " + e.getMessage());
+                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Hinzufügen des Lagerplatzes: " + e.getMessage(), Status.ERROR);
+                    }
                 } else {
                     deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
                 }
@@ -280,22 +305,32 @@ public class Service extends Thread {
                     deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
                 }
                 break;
-            case GETBYID:
+            case SEARCH:
                 if (deoIn.getData() instanceof Integer) {
-                    int id = (Integer) deoIn.getData();
+                    int id = Cast.safeCast(deoIn.getData(), Integer.class);
                     try {
-                        LagerPlatz platz = ((Database) store).getLagerPlatzById(id);
-                        if (platz != null) {
-                            deoOut = new WarehouseReturnDEO(platz, "Lagerplatz gefunden", Status.OK);
+                        LagerPlatz lagerPlatz = ((Database) store).getLagerPlatzById(id);
+                        if (lagerPlatz != null && lagerPlatz.getId() > 0) {
+                            deoOut = new WarehouseReturnDEO(lagerPlatz, "Lagerplatz mit ID " + id + " gefunden", Status.OK);
                         } else {
                             deoOut = new WarehouseReturnDEO(null, "Lagerplatz mit ID " + id + " nicht gefunden", Status.ERROR);
                         }
                     } catch (RuntimeException e) {
-                        logger.log(Level.ERROR, "Fehler beim Abrufen des Lagerplatzes: " + e.getMessage());
-                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Abrufen des Lagerplatzes: " + e.getMessage(), Status.ERROR);
+                        logger.log(Level.ERROR, "Failed to search LagerPlatz ID " + id + ": " + e.getMessage());
+                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Suchen des Lagerplatzes: " + e.getMessage(), Status.ERROR);
                     }
                 } else {
-                    deoOut = new WarehouseReturnDEO(null, "Ungültige ID", Status.ERROR);
+                    deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
+                }
+                break;
+            case GETNEXTID:
+                try {
+                    int nextId = store.getNextLagerPlatzId();
+                    logger.log(Level.INFO, "Nächste LagerPlatz-ID für Client " + currentNumber + ": " + nextId);
+                    deoOut = new WarehouseReturnDEO(nextId, "Nächste LagerPlatz-ID: " + nextId, Status.OK);
+                } catch (RuntimeException e) {
+                    logger.log(Level.ERROR, "Fehler beim Abrufen der nächsten LagerPlatz-ID: " + e.getMessage());
+                    deoOut = new WarehouseReturnDEO(null, "Fehler beim Abrufen der nächsten LagerPlatz-ID", Status.ERROR);
                 }
                 break;
             default:
@@ -358,6 +393,17 @@ public class Service extends Thread {
                     deoOut = new WarehouseReturnDEO(relevantData, "Lagerbestand durchsucht nach " + search, Status.OK);
                 } else {
                     deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
+                }
+                break;
+            case INVENTUR: // Neu: Inventur hinzufügen
+                try {
+                    List<LagerBestand> data = store.getLagerBestands();
+                    // Optional: Sortierung oder Filter anwenden, z. B. alphabetisch nach Produktname
+                    Collections.sort(data, new BestandByProduktAlpha());
+                    deoOut = new WarehouseReturnDEO(data, "Inventur erstellt: Liste aller Lagerbestände", Status.OK);
+                } catch (RuntimeException e) {
+                    logger.log(Level.ERROR, "Fehler bei der Inventur: " + e.getMessage());
+                    deoOut = new WarehouseReturnDEO(null, "Fehler bei der Inventur: " + e.getMessage(), Status.ERROR);
                 }
                 break;
             default:
@@ -460,22 +506,22 @@ public class Service extends Thread {
                     deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
                 }
                 break;
-            case GETBYID:
+            case SEARCH:
                 if (deoIn.getData() instanceof Integer) {
-                    int id = (Integer) deoIn.getData();
+                    int id = Cast.safeCast(deoIn.getData(), Integer.class);
                     try {
                         Produkt produkt = ((Database) store).getProduktById(id);
-                        if (produkt != null) {
-                            deoOut = new WarehouseReturnDEO(produkt, "Produkt gefunden", Status.OK);
+                        if (produkt != null && produkt.getId() > 0) {
+                            deoOut = new WarehouseReturnDEO(produkt, "Produkt mit ID " + id + " gefunden", Status.OK);
                         } else {
                             deoOut = new WarehouseReturnDEO(null, "Produkt mit ID " + id + " nicht gefunden", Status.ERROR);
                         }
                     } catch (RuntimeException e) {
-                        logger.log(Level.ERROR, "Fehler beim Abrufen des Produkts: " + e.getMessage());
-                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Abrufen des Produkts: " + e.getMessage(), Status.ERROR);
+                        logger.log(Level.ERROR, "Failed to search Produkt ID " + id + ": " + e.getMessage());
+                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Suchen des Produkts: " + e.getMessage(), Status.ERROR);
                     }
                 } else {
-                    deoOut = new WarehouseReturnDEO(null, "Ungültige ID", Status.ERROR);
+                    deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
                 }
                 break;
             default:
@@ -642,47 +688,47 @@ public class Service extends Thread {
         }
         return deoOut;
     }
-    private WarehouseReturnDEO handleZoneReorder(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
+    private WarehouseReturnDEO handleZoneNachbestellung(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
-            case ADD:
-                if (deoIn.getData() != null && deoIn.getData() instanceof Reorder) {
-                    Reorder reorder = Cast.safeCast(deoIn.getData(), Reorder.class);
-                    try {
-                        ((Database) store).addReorder(reorder);
-                        deoOut = new WarehouseReturnDEO(null, "Nachbestellung erfolgreich angelegt", Status.OK);
-                    } catch (RuntimeException e) {
-                        logger.log(Level.ERROR, "Failed to add Reorder: " + e.getMessage());
-                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Hinzufügen der Nachbestellung: " + e.getMessage(), Status.ERROR);
-                    }
-                } else {
-                    deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
-                }
-                break;
             case LIST:
-                try {
-                    List<Reorder> reorders = ((Database) store).getAllReorders();
-                    deoOut = new WarehouseReturnDEO(reorders, "Liste aller Nachbestellungen", Status.OK);
-                } catch (RuntimeException e) {
-                    logger.log(Level.ERROR, "Failed to retrieve Reorders: " + e.getMessage());
-                    deoOut = new WarehouseReturnDEO(null, "Fehler beim Abrufen der Nachbestellungen: " + e.getMessage(), Status.ERROR);
-                }
+                deoOut = new WarehouseReturnDEO(store.getNachbestellungen(), "Liste aller Nachbestellungen", Status.OK);
                 break;
+
             case UPDATE:
-                if (deoIn.getData() != null && deoIn.getData() instanceof Reorder) {
-                    Reorder reorder = Cast.safeCast(deoIn.getData(), Reorder.class);
+                if (deoIn.getData() != null && deoIn.getData() instanceof thw.edu.javaII.port.warehouse.model.Nachbestellung) {
+                    thw.edu.javaII.port.warehouse.model.Nachbestellung n = Cast.safeCast(deoIn.getData(), thw.edu.javaII.port.warehouse.model.Nachbestellung.class);
+                    // Nachbestellung in der Datenbank aktualisieren
+                    store.updateNachbestellung(n);
+
+                    // Den zugehörigen LagerBestand aktualisieren
                     try {
-                        ((Database) store).updateReorder(reorder);
-                        deoOut = new WarehouseReturnDEO(null, "Nachbestellung erfolgreich aktualisiert", Status.OK);
+                        LagerBestand matchingBestand = store.getLagerBestandByProduktId(n.getPid());
+                        if (matchingBestand != null) {
+                            int neueAnzahl = matchingBestand.getAnzahl() + n.getAnzahlnachbestellung();
+                            matchingBestand.setAnzahl(neueAnzahl);
+                            store.updateLagerBestand(matchingBestand);
+                            logger.log(Level.INFO, "LagerBestand für Produkt-ID " + n.getPid() + " aktualisiert. Neue Menge: " + neueAnzahl);
+
+                            // Aktualisiere das Nachbestellung-Objekt mit dem neuen aktuellen Bestand
+                            n.setAktuellerbestand(neueAnzahl); // Setze den neuen aktuellen Bestand
+                            n.setZukünftigerbestand(neueAnzahl); // Optional: Zukünftiger Bestand anpassen
+                            store.updateNachbestellung(n); // Speichere die aktualisierte Nachbestellung
+
+                            deoOut = new WarehouseReturnDEO(null, "Nachbestellung und Lagerbestand erfolgreich aktualisiert", Status.OK);
+                        } else {
+                            logger.log(Level.WARNING, "Kein LagerBestand für Produkt-ID " + n.getPid() + " gefunden");
+                            deoOut = new WarehouseReturnDEO(null, "Nachbestellung aktualisiert, aber kein Lagerbestand gefunden", Status.WARNING);
+                        }
                     } catch (RuntimeException e) {
-                        logger.log(Level.ERROR, "Failed to update Reorder: " + e.getMessage());
-                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Aktualisieren der Nachbestellung: " + e.getMessage(), Status.ERROR);
+                        logger.log(Level.ERROR, "Fehler beim Aktualisieren des Lagerbestands: " + e.getMessage());
+                        deoOut = new WarehouseReturnDEO(null, "Fehler beim Aktualisieren des Lagerbestands: " + e.getMessage(), Status.ERROR);
                     }
                 } else {
                     deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
                 }
                 break;
             default:
-                deoOut = new WarehouseReturnDEO(null, "Unbekanntes Kommando", Status.ERROR);
+                deoOut = new WarehouseReturnDEO(null, "Für die Zone nicht unterstütztes Kommando", Status.INFO);
                 break;
         }
         return deoOut;

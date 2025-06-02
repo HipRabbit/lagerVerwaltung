@@ -1,6 +1,61 @@
 package thw.edu.javaII.port.warehouse.ui;
 
+/**
+ * Aufzählung der Menübefehle für die Lagerverwaltungs-Benutzeroberfläche.
+ *
+ * @author Lennart Höpfner
+ */
 public enum MenuActionCommands {
-    BEENDEN, STARTSEITE, SERVERBEENDEN, BESTAND, STATISTIK, SUCHEN, INFO, KUNDEN_DATENBANK,
-    BESTELLUNG_PAGE, LAGER, LAGERPLATZ, PRODUKT, DATENBANK, REORDER_PAGE // Neuer Befehl
+    /**
+     * Beendet die Anwendung.
+     */
+    BEENDEN,
+    /**
+     * Zeigt die Startseite an.
+     */
+    STARTSEITE,
+    /**
+     * Beendet den Server.
+     */
+    SERVERBEENDEN,
+    /**
+     * Initialisiert die Datenbank.
+     */
+    DATENBANK,
+    /**
+     * Zeigt die Bestandsübersicht an.
+     */
+    BESTAND,
+    /**
+     * Zeigt die Statistikseite an.
+     */
+    STATISTIK,
+    /**
+     * Zeigt die Suchseite an.
+     */
+    SUCHEN,
+    /**
+     * Zeigt die Infoseite an.
+     */
+    INFO,
+    /**
+     * Zeigt die Kundendatenbank an.
+     */
+    KUNDEN_DATENBANK,
+    /**
+     * Zeigt die Bestellungsübersicht an.
+     */
+    BESTELLUNG_PAGE,
+    /**
+     * Zeigt die Lagerübersicht an.
+     */
+    LAGER,
+    /**
+     * Zeigt die Lagerplatzübersicht an.
+     */
+    LAGERPLATZ,
+    /**
+     * Zeigt die Produktübersicht an.
+     */
+    PRODUKT, NACHBESTELLUNG
 }

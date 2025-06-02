@@ -1,0 +1,308 @@
+package thw.edu.javaII.port.warehouse.server.data;
+
+import java.util.List;
+
+import thw.edu.javaII.port.warehouse.model.DemoModel;
+import thw.edu.javaII.port.warehouse.model.Lager;
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+import thw.edu.javaII.port.warehouse.model.Kunde;
+import thw.edu.javaII.port.warehouse.model.Bestellung;
+
+/**
+ * Schnittstelle für die Datenspeicherung im Lagerverwaltungssystem.
+ * Definiert Methoden zum Verwalten von Lager, Lagerplätzen, Lagerbeständen, Produkten, Kunden, Bestellungen und Demo-Daten.
+ * 
+ * @author Lennart Höpfner
+ */
+public interface IStorage {
+
+    /**
+     * Initialisiert die Liste der Lager.
+     * 
+     * @param list die Liste der {@link Lager}-Objekte
+     */
+    void initLager(List<Lager> list);
+
+    /**
+     * Fügt ein neues Lager hinzu.
+     * 
+     * @param model das {@link Lager}-Objekt
+     */
+    void addLager(Lager model);
+
+    /**
+     * Aktualisiert ein bestehendes Lager.
+     * 
+     * @param model das zu aktualisierende {@link Lager}-Objekt
+     */
+    void updateLager(Lager model);
+
+    /**
+     * Löscht ein Lager.
+     * 
+     * @param model das zu löschende {@link Lager}-Objekt
+     */
+    void deleteLager(Lager model);
+
+    /**
+     * Gibt die Liste aller Lager zurück.
+     * 
+     * @return die Liste der {@link Lager}-Objekte
+     */
+    List<Lager> getLagers();
+
+    /**
+     * Initialisiert die Liste der Lagerplätze.
+     * 
+     * @param list die Liste der {@link LagerPlatz}-Objekte
+     */
+    void initLagerPlatz(List<LagerPlatz> list);
+
+    /**
+     * Fügt einen neuen Lagerplatz hinzu.
+     * 
+     * @param model das {@link LagerPlatz}-Objekt
+     */
+    void addLagerPlatz(LagerPlatz model);
+
+    /**
+     * Aktualisiert einen bestehenden Lagerplatz.
+     * 
+     * @param model das zu aktualisierende {@link LagerPlatz}-Objekt
+     */
+    void updateLagerPlatz(LagerPlatz model);
+
+    /**
+     * Löscht einen Lagerplatz.
+     * 
+     * @param model das zu löschende {@link LagerPlatz}-Objekt
+     */
+    void deleteLagerPlatz(LagerPlatz model);
+
+    /**
+     * Gibt die Liste aller Lagerplätze zurück.
+     * 
+     * @return die Liste der {@link LagerPlatz}-Objekte
+     */
+    List<LagerPlatz> getLagerPlatzs();
+
+    /**
+     * Initialisiert die Liste der Lagerbestände.
+     * 
+     * @param list die Liste der {@link LagerBestand}-Objekte
+     */
+    void initLagerBestand(List<LagerBestand> list);
+
+    /**
+     * Fügt einen neuen Lagerbestand hinzu.
+     * 
+     * @param model das {@link LagerBestand}-Objekt
+     */
+    void addLagerBestand(LagerBestand model);
+
+    /**
+     * Aktualisiert einen bestehenden Lagerbestand.
+     * 
+     * @param model das zu aktualisierende {@link LagerBestand}-Objekt
+     */
+    void updateLagerBestand(LagerBestand model);
+
+    /**
+     * Löscht einen Lagerbestand.
+     * 
+     * @param model das zu löschende {@link LagerBestand}-Objekt
+     */
+    void deleteLagerBestand(LagerBestand model);
+
+    /**
+     * Gibt die Liste aller Lagerbestände zurück.
+     * 
+     * @return die Liste der {@link LagerBestand}-Objekte
+     */
+    List<LagerBestand> getLagerBestands();
+
+    /**
+     * Initialisiert die Liste der Produkte.
+     * 
+     * @param list die Liste der {@link Produkt}-Objekte
+     */
+    void initProdukt(List<Produkt> list);
+
+    /**
+     * Fügt ein neues Produkt hinzu.
+     * 
+     * @param model das {@link Produkt}-Objekt
+     */
+    void addProdukt(Produkt model);
+
+    /**
+     * Sucht ein Produkt anhand eines Modells.
+     * 
+     * @param model das {@link Produkt}-Objekt, nach dem gesucht wird
+     * @return das gefundene {@link Produkt}-Objekt
+     */
+    Produkt getProduktByModel(Produkt model);
+
+    /**
+     * Aktualisiert ein bestehendes Produkt.
+     * 
+     * @param model das zu aktualisierende {@link Produkt}-Objekt
+     */
+    void updateProdukt(Produkt model);
+
+    /**
+     * Löscht ein Produkt.
+     * 
+     * @param model das zu löschende {@link Produkt}-Objekt
+     */
+    void deleteProdukt(Produkt model);
+
+    /**
+     * Gibt die Liste aller Produkte zurück.
+     * 
+     * @return die Liste der {@link Produkt}-Objekte
+     */
+    List<Produkt> getProdukts();
+
+    /**
+     * Initialisiert die Liste der Demo-Modelle.
+     * 
+     * @param list die Liste der {@link DemoModel}-Objekte
+     */
+    void initDemo(List<DemoModel> list);
+
+    /**
+     * Fügt ein neues Demo-Modell hinzu.
+     * 
+     * @param model das {@link DemoModel}-Objekt
+     */
+    void addDemo(DemoModel model);
+
+    /**
+     * Gibt die Liste aller Demo-Modelle zurück.
+     * 
+     * @return die Liste der {@link DemoModel}-Objekte
+     */
+    List<DemoModel> getDemos();
+
+    /**
+     * Initialisiert die Liste der Kunden.
+     * 
+     * @param list die Liste der {@link Kunde}-Objekte
+     */
+    void initKunde(List<Kunde> list);
+
+    /**
+     * Fügt einen neuen Kunden hinzu.
+     * 
+     * @param model das {@link Kunde}-Objekt
+     */
+    void addKunde(Kunde model);
+
+    /**
+     * Sucht einen Kunden anhand seiner ID.
+     * 
+     * @param id die ID des Kunden
+     * @return das gefundene {@link Kunde}-Objekt
+     */
+    Kunde getKundeById(int id);
+
+    /**
+     * Aktualisiert einen bestehenden Kunden.
+     * 
+     * @param model das zu aktualisierende {@link Kunde}-Objekt
+     */
+    void updateKunde(Kunde model);
+
+    /**
+     * Löscht einen Kunden.
+     * 
+     * @param model das zu löschende {@link Kunde}-Objekt
+     */
+    void deleteKunde(Kunde model);
+
+    /**
+     * Gibt die Liste aller Kunden zurück.
+     * 
+     * @return die Liste der {@link Kunde}-Objekte
+     */
+    List<Kunde> getKunden();
+
+    /**
+     * Initialisiert die Liste der Bestellungen.
+     * 
+     * @param list die Liste der {@link Bestellung}-Objekte
+     */
+    void initBestellung(List<Bestellung> list);
+
+    /**
+     * Fügt eine neue Bestellung hinzu.
+     * 
+     * @param model das {@link Bestellung}-Objekt
+     */
+    void addBestellung(Bestellung model);
+
+    /**
+     * Aktualisiert eine bestehende Bestellung.
+     * 
+     * @param model das zu aktualisierende {@link Bestellung}-Objekt
+     */
+    void updateBestellung(Bestellung model);
+
+    /**
+     * Löscht eine Bestellung.
+     * 
+     * @param model das zu löschende {@link Bestellung}-Objekt
+     */
+    void deleteBestellung(Bestellung model);
+
+    /**
+     * Gibt die Liste aller Bestellungen zurück.
+     * 
+     * @return die Liste der {@link Bestellung}-Objekte
+     */
+    List<Bestellung> getBestellungen();
+
+    /**
+     * Gibt die Liste der Bestellungen für eine bestimmte Kunden-ID zurück.
+     * 
+     * @param Id die ID des Kunden
+     * @return die Liste der {@link Bestellung}-Objekte
+     */
+    List<Bestellung> getBestellungenByKundeId(int Id);
+
+    /**
+     * Gibt die nächste verfügbare Kunden-ID zurück.
+     * 
+     * @return die nächste Kunden-ID
+     */
+    int getNextKundeId();
+
+    /**
+     * Sucht eine Bestellung anhand ihrer ID.
+     * 
+     * @param id die ID der Bestellung
+     * @return das gefundene {@link Bestellung}-Objekt
+     */
+    Bestellung getBestellungById(int id);
+
+    /**
+     * Sucht einen Lagerplatz anhand seiner ID.
+     * 
+     * @param id die ID des Lagerplatzes
+     * @return das gefundene {@link LagerPlatz}-Objekt
+     */
+    LagerPlatz getLagerPlatzById(int id);
+ // Nachbestellung
+ 	void initNachbestellung();
+
+ 	void updateNachbestellung(thw.edu.javaII.port.warehouse.model.Nachbestellung model);
+
+ 	List<thw.edu.javaII.port.warehouse.model.Nachbestellung> getNachbestellungen();
+
+	LagerBestand getLagerBestandByProduktId(int pid);
+
+	int getNextLagerPlatzId();
+}

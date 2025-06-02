@@ -8,6 +8,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JButton;
@@ -33,7 +34,7 @@ public class KundeBestellungen extends JDialog {
     private BestellungTableModel model;
     private Session ses;
     @SuppressWarnings("unused")
-	private JFrame parent;
+    private JFrame parent;
     private Kunde kunde;
     private JLabel lblGesamtwert;
 
@@ -56,6 +57,10 @@ public class KundeBestellungen extends JDialog {
         add(panel, BorderLayout.CENTER);
         panel.setLayout(new BorderLayout());
         List<Bestellung> bestellungen = ses.getCommunicator().getBestellungenByKunde(kunde.getId());
+        // Fallback auf leere Liste, falls null
+        if (bestellungen == null) {
+            bestellungen = new ArrayList<>();
+        }
         if (bestellungen.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Keine Bestellungen für Kunde " + kunde.toString() + " gefunden.",
                     "Hinweis", JOptionPane.INFORMATION_MESSAGE);
@@ -100,6 +105,10 @@ public class KundeBestellungen extends JDialog {
         double gesamtwert = 0.0;
         try {
             List<Bestellung> bestellungen = ses.getCommunicator().getBestellungenByKunde(kunde.getId());
+            // Fallback für berechneGesamtwert, falls bestellungen null ist
+            if (bestellungen == null) {
+                bestellungen = new ArrayList<>();
+            }
             for (Bestellung bestellung : bestellungen) {
                 for (BestellungProdukt bp : bestellung.getProdukte()) {
                     gesamtwert += bp.getAnzahl() * bp.getProdukt().getPreis();

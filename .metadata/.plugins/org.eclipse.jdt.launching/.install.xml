@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <dirs>
-    <entry loc="C:\Users\lenna\OneDrive\Documents\DHBW, Heilbronn\eclipse\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.6.v20250130-0529" stamp="1746724962912"/>
-    <entry loc="C:\Users\lenna\.p2\pool\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.7.v20250502-0916" stamp="1748041238333"/>
-    <entry loc="C:\Users\lenna\OneDrive\Documents\DHBW, Heilbronn\eclipse\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.6.v20250130-0529\jre" stamp="1748041155408"/>
     <entry loc="/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home" stamp="1650995995000"/>
     <entry loc="C:\Users\lenna\Downloads\eclipse-java-2024-09-R-win32-x86_64\eclipse\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.4.v20240802-1551" stamp="1728819072005"/>
-    <entry loc="C:\Users\lenna\.p2\pool\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.7.v20250502-0916\jre" stamp="1748041238330"/>
     <entry loc="/Library/Java/JavaVirtualMachines/jdk-15.0.2.jdk/Contents/Home" stamp="1607380558000"/>
     <entry loc="C:\Users\lenna\Downloads\eclipse-java-2024-09-R-win32-x86_64\eclipse\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.4.v20240802-1551\jre" stamp="1728819080009"/>
 </dirs>

@@ -18,8 +18,8 @@ import thw.edu.javaII.port.warehouse.model.DemoModel;
 import thw.edu.javaII.port.warehouse.model.Lager;
 import thw.edu.javaII.port.warehouse.model.LagerBestand;
 import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
 import thw.edu.javaII.port.warehouse.model.Produkt;
-import thw.edu.javaII.port.warehouse.model.Reorder;
 import thw.edu.javaII.port.warehouse.model.Kunde;
 import thw.edu.javaII.port.warehouse.model.Bestellung;
 import thw.edu.javaII.port.warehouse.model.BestellungProdukt;
@@ -302,54 +302,35 @@ public class Database implements IStorage {
         return l;
     }
 
-    public Lager getLagerById(int id) {
-        Lager model = new Lager();
+    public Lager getLagerById(int id) throws SQLException {
+        Lager model = null;
         Connection con = null;
-        Statement st = null;
+        PreparedStatement ps = null;
         ResultSet rs = null;
         try {
             con = DriverManager.getConnection(dbUrl);
-            st = con.createStatement();
-            String sql = "SELECT * FROM LAGER WHERE id=" + id;
-            rs = st.executeQuery(sql);
+            String sql = "SELECT * FROM LAGER WHERE id = ?";
+            ps = con.prepareStatement(sql);
+            ps.setInt(1, id);
+            rs = ps.executeQuery();
 
-            rs.next();
-            model.setId(id);
-            String name = rs.getString("NAME");
-            String ort = rs.getString("ORT");
-            String art = rs.getString("ART");
-            model.setName(name);
-            model.setOrt(ort);
-            model.setArt(art);
+            if (rs.next()) {
+                model = new Lager();
+                model.setId(rs.getInt("id"));
+                model.setName(rs.getString("name"));
+                model.setOrt(rs.getString("ort"));
+                model.setArt(rs.getString("art"));
+            }
         } catch (SQLException e) {
-            logger.log(Level.ERROR, e);
-            e.printStackTrace();
+            logger.log(Level.ERROR, "Fehler beim Abrufen des Lagers mit ID " + id + ": " + e.getMessage());
+            throw e; // Werfe die Ausnahme weiter, um sie im Service zu behandeln
         } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (st != null) {
-                try {
-                    st.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (con != null) {
-                try {
-                    con.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
+            if (rs != null) rs.close();
+            if (ps != null) ps.close();
+            if (con != null) con.close();
         }
-        return model;
+        return model; // Rückgabe null, wenn kein Datensatz gefunden wurde
     }
-
     @Override
     public void initLagerPlatz(List<LagerPlatz> list) {
         Connection con = null;
@@ -392,13 +373,40 @@ public class Database implements IStorage {
         }
     }
 
-    @Override
+    public synchronized int getNextLagerPlatzId() {
+        Connection con = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            con = DriverManager.getConnection(dbUrl);
+            String sql = "SELECT MAX(id) AS max_id FROM LAGERPLATZ";
+            ps = con.prepareStatement(sql);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                int maxId = rs.getInt("max_id");
+                return Math.max(maxId + 10, 1000);
+            }
+            return 1000;
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, "Error getting next LagerPlatz ID: " + e.getMessage());
+            e.printStackTrace();
+            return -1;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+                if (con != null) con.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public synchronized void addLagerPlatz(LagerPlatz model) {
         Connection con = null;
         PreparedStatement ps = null;
         try {
             con = DriverManager.getConnection(dbUrl);
-            // Use predefined ID if provided, otherwise generate new ID (optional)
             int newId = (model.getId() > 0) ? model.getId() : getNextLagerPlatzId();
             String sql = "INSERT INTO LAGERPLATZ (id, name, kapazitaet, lager_id) VALUES (?, ?, ?, ?)";
             ps = con.prepareStatement(sql);
@@ -414,34 +422,6 @@ public class Database implements IStorage {
             throw new RuntimeException("Failed to add LagerPlatz", e);
         } finally {
             try {
-                if (ps != null) ps.close();
-                if (con != null) con.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-    private synchronized int getNextLagerPlatzId() {
-        Connection con = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            con = DriverManager.getConnection(dbUrl);
-            String sql = "SELECT MAX(id) AS max_id FROM LAGERPLATZ";
-            ps = con.prepareStatement(sql);
-            rs = ps.executeQuery();
-            if (rs.next()) {
-                int maxId = rs.getInt("max_id");
-                return Math.max(maxId + 10, 1000); // Assuming 10-step increments
-            }
-            return 1000;
-        } catch (SQLException e) {
-            logger.log(Level.ERROR, "Error getting next LagerPlatz ID: " + e.getMessage());
-            e.printStackTrace();
-            return -1;
-        } finally {
-            try {
-                if (rs != null) rs.close();
                 if (ps != null) ps.close();
                 if (con != null) con.close();
             } catch (SQLException e) {
@@ -560,53 +540,38 @@ public class Database implements IStorage {
     }
 
     public LagerPlatz getLagerPlatzById(int id) {
-        LagerPlatz model = new LagerPlatz();
+        LagerPlatz model = null;
         Connection con = null;
-        Statement st = null;
+        PreparedStatement ps = null;
         ResultSet rs = null;
         try {
             con = DriverManager.getConnection(dbUrl);
-            st = con.createStatement();
-            String sql = "SELECT * FROM LAGERPLATZ WHERE id=" + id;
-            rs = st.executeQuery(sql);
+            String sql = "SELECT * FROM LAGERPLATZ WHERE id = ?";
+            ps = con.prepareStatement(sql);
+            ps.setInt(1, id);
+            rs = ps.executeQuery();
 
-            rs.next();
-            model.setId(id);
-            String name = rs.getString("NAME");
-            int kapazitaet = rs.getInt("KAPAZITAET");
-            Lager lager_id = getLagerById(rs.getInt("LAGER_ID"));
-            model.setName(name);
-            model.setKapazitaet(kapazitaet);
-            model.setLager_id(lager_id);
+            if (rs.next()) {
+                model = new LagerPlatz();
+                model.setId(rs.getInt("id"));
+                model.setName(rs.getString("NAME"));
+                model.setKapazitaet(rs.getInt("KAPAZITAET"));
+                model.setLager_id(getLagerById(rs.getInt("LAGER_ID")));
+            }
         } catch (SQLException e) {
-            logger.log(Level.ERROR, e);
+            logger.log(Level.ERROR, "Fehler beim Abrufen des Lagerplatzes mit ID " + id + ": " + e.getMessage());
             e.printStackTrace();
         } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (st != null) {
-                try {
-                    st.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (con != null) {
-                try {
-                    con.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+                if (con != null) con.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
         return model;
     }
-
     @Override
     public void initLagerBestand(List<LagerBestand> list) {
         Connection con = null;
@@ -963,53 +928,41 @@ public class Database implements IStorage {
     }
 
     public Produkt getProduktById(int id) {
-        Produkt model = new Produkt();
+        Produkt model = null;
         Connection con = null;
-        Statement st = null;
+        PreparedStatement ps = null;
         ResultSet rs = null;
         try {
             con = DriverManager.getConnection(dbUrl);
-            st = con.createStatement();
-            String sql = "SELECT * FROM PRODUKT WHERE id=" + id;
-            rs = st.executeQuery(sql);
+            String sql = "SELECT * FROM PRODUKT WHERE id = ?";
+            ps = con.prepareStatement(sql);
+            ps.setInt(1, id);
+            rs = ps.executeQuery();
 
-            rs.next();
-            model.setId(id);
-            String name = rs.getString("NAME");
-            String hersteller = rs.getString("HERSTELLER");
-            double preis = rs.getDouble("PREIS");
-            model.setName(name);
-            model.setHersteller(hersteller);
-            model.setPreis(preis);
+            if (rs.next()) {
+                model = new Produkt();
+                model.setId(rs.getInt("id"));
+                model.setName(rs.getString("name")); // Sicherstellen, dass rs offen ist
+                // Weitere Felder wie Hersteller, Preis usw. hier hinzufügen
+                model.setHersteller(rs.getString("hersteller"));
+                model.setPreis(rs.getDouble("preis"));
+                // ... andere Felder
+            }
         } catch (SQLException e) {
-            logger.log(Level.ERROR, e);
+            logger.log(Level.ERROR, "Fehler beim Abrufen des Produkts mit ID " + id + ": " + e.getMessage());
             e.printStackTrace();
         } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (st != null) {
-                try {
-                    st.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (con != null) {
-                try {
-                    con.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+            // Schließen der Ressourcen nur nach vollständigem Auslesen
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+                if (con != null) con.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
         return model;
     }
-
     @Override
     public void updateProdukt(Produkt model) {
         Connection con = null;
@@ -2501,132 +2454,153 @@ public class Database implements IStorage {
         }
         return false;
     }
-    public void initReorder() {
-        Connection conn = null;
-        Statement stmt = null;
-        try {
-            conn = DriverManager.getConnection(dbUrl);
-            if (!tableExists("REORDER")) {
-                stmt = conn.createStatement();
-                String sql = "CREATE TABLE IF NOT EXISTS REORDER (" +
-                             "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                             "produkt_id INTEGER NOT NULL, " +
-                             "lagerplatz_id INTEGER NOT NULL, " +
-                             "menge INTEGER NOT NULL, " +
-                             "bestell_datum INTEGER NOT NULL, " +
-                             "status TEXT NOT NULL)";
-                stmt.executeUpdate(sql);
-                logger.log(Level.INFO, "REORDER table created.");
-            }
+    @Override
+    public void initNachbestellung() {
+        try (Connection conn = DriverManager.getConnection(dbUrl);
+             Statement stmt = conn.createStatement()) {
+
+            String sql = "CREATE TABLE IF NOT EXISTS NACHBESTELLUNG (" +
+                         "pid INTEGER PRIMARY KEY, " +
+                         "pname TEXT, " +
+                         "aktuellerbestand INTEGER, " +
+                         "phersteller TEXT, " +
+                         "anzahlnachbestellung INTEGER, " +
+                         "zukuenftigerbestand INTEGER)";
+            stmt.executeUpdate(sql);
+
         } catch (SQLException e) {
-            logger.log(Level.ERROR, "Error initializing REORDER table: " + e.getMessage());
-            throw new RuntimeException("Failed to initialize REORDER table", e);
-        } finally {
-            try {
-                if (stmt != null) stmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            logger.log(Level.ERROR, "Fehler beim Erstellen der Tabelle NACHBESTELLUNG: " + e.getMessage());
         }
     }
 
-    public synchronized void addReorder(Reorder reorder) {
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet generatedKeys = null;
-        try {
-            conn = DriverManager.getConnection(dbUrl);
-            String sql = "INSERT INTO REORDER (produkt_id, lagerplatz_id, menge, bestell_datum, status) VALUES (?, ?, ?, ?, ?)";
-            ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            ps.setInt(1, reorder.getProduktId());
-            ps.setInt(2, reorder.getLagerPlatzId());
-            ps.setInt(3, reorder.getMenge());
-            ps.setLong(4, reorder.getBestellDatum());
-            ps.setString(5, reorder.getStatus());
+    @Override
+    public List<Nachbestellung> getNachbestellungen() {
+        List<Nachbestellung> list = new ArrayList<>();
+        String sql = "SELECT * FROM NACHBESTELLUNG";
+
+        try (Connection conn = DriverManager.getConnection(dbUrl);
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                Nachbestellung nb = new Nachbestellung();
+                nb.setPid(rs.getInt("pid"));
+                nb.setPname(rs.getString("pname"));
+                nb.setAktuellerbestand(rs.getInt("aktuellerbestand"));
+                nb.setPhersteller(rs.getString("phersteller"));
+                nb.setAnzahlnachbestellung(rs.getInt("anzahlnachbestellung"));
+                nb.setZukünftigerbestand(rs.getInt("zukuenftigerbestand"));
+                list.add(nb);
+            }
+
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, "Fehler beim Laden der Nachbestellungen: " + e.getMessage());
+        }
+
+        return list;
+    }
+
+    public void initNachbestellungenFromProdukte() {
+        try (Connection conn = DriverManager.getConnection(dbUrl)) {
+
+            String produktSql = "SELECT id, name, hersteller FROM PRODUKT";
+            String bestandSql = "SELECT SUM(anzahl) AS total FROM LAGERBESTAND WHERE produkt_id = ?";
+
+            PreparedStatement produktStmt = conn.prepareStatement(produktSql);
+            ResultSet rs = produktStmt.executeQuery();
+
+            PreparedStatement bestandStmt = conn.prepareStatement(bestandSql);
+            PreparedStatement insertStmt = conn.prepareStatement(
+                    "INSERT INTO NACHBESTELLUNG (pid, pname, aktuellerbestand, phersteller, anzahlnachbestellung, zukuenftigerbestand) VALUES (?, ?, ?, ?, ?, ?)");
+
+            while (rs.next()) {
+                int pid = rs.getInt("id");
+                String pname = rs.getString("name");
+                String phersteller = rs.getString("hersteller");
+
+                // Bestand holen
+                bestandStmt.setInt(1, pid);
+                ResultSet bestandRs = bestandStmt.executeQuery();
+                int bestand = bestandRs.next() ? bestandRs.getInt("total") : 0;
+
+                // INSERT
+                insertStmt.setInt(1, pid);
+                insertStmt.setString(2, pname);
+                insertStmt.setInt(3, bestand);
+                insertStmt.setString(4, phersteller);
+                insertStmt.setInt(5, 0);           // anzahlnachbestellung = 0
+                insertStmt.setInt(6, bestand);     // zukuenftigerbestand = bestand
+
+                insertStmt.executeUpdate();
+            }
+
+            rs.close();
+            produktStmt.close();
+            bestandStmt.close();
+            insertStmt.close();
+
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, "Fehler beim Initialisieren der Nachbestellungen: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void updateNachbestellung(Nachbestellung model) {
+        String sql = "UPDATE NACHBESTELLUNG SET " +
+                     "pname = ?, " +
+                     "aktuellerbestand = ?, " +
+                     "phersteller = ?, " +
+                     "anzahlnachbestellung = ?, " +
+                     "zukuenftigerbestand = ? " +
+                     "WHERE pid = ?";
+
+        try (Connection conn = DriverManager.getConnection(dbUrl);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, model.getPname());
+            ps.setInt(2, model.getAktuellerbestand());
+            ps.setString(3, model.getPhersteller());
+            ps.setInt(4, model.getAnzahlnachbestellung());
+            ps.setInt(5, model.getZukünftigerbestand());
+            ps.setInt(6, model.getPid());
+
             ps.executeUpdate();
 
-            generatedKeys = ps.getGeneratedKeys();
-            if (generatedKeys.next()) {
-                reorder.setId(generatedKeys.getInt(1));
-            } else {
-                throw new SQLException("No ID generated for Reorder");
-            }
         } catch (SQLException e) {
-            logger.log(Level.ERROR, "Error adding Reorder: " + e.getMessage());
-            throw new RuntimeException("Failed to add Reorder", e);
-        } finally {
-            try {
-                if (generatedKeys != null) generatedKeys.close();
-                if (ps != null) ps.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            logger.log(Level.ERROR, "Fehler beim Update der Nachbestellung: " + e.getMessage());
         }
     }
-
-    public List<Reorder> getAllReorders() {
-        List<Reorder> reorders = new ArrayList<>();
-        Connection conn = null;
+    public LagerBestand getLagerBestandByProduktId(int produktId) {
+        LagerBestand model = null;
+        Connection con = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
-            conn = DriverManager.getConnection(dbUrl);
-            String sql = "SELECT * FROM REORDER";
-            ps = conn.prepareStatement(sql);
+            con = DriverManager.getConnection(dbUrl);
+            String sql = "SELECT * FROM LAGERBESTAND WHERE produkt_id = ?";
+            ps = con.prepareStatement(sql);
+            ps.setInt(1, produktId);
             rs = ps.executeQuery();
 
-            while (rs.next()) {
-                Reorder reorder = new Reorder(
-                    rs.getInt("id"),
-                    rs.getInt("produkt_id"),
-                    rs.getInt("lagerplatz_id"),
-                    rs.getInt("menge"),
-                    rs.getLong("bestell_datum"),
-                    rs.getString("status")
-                );
-                reorders.add(reorder);
+            if (rs.next()) {
+                model = new LagerBestand();
+                model.setId(rs.getInt("id"));
+                model.setAnzahl(rs.getInt("anzahl"));
+                model.setProdukt_id(getProduktById(produktId));
+                model.setLagerplatz_id(getLagerPlatzById(rs.getInt("lagerplatz_id")));
             }
         } catch (SQLException e) {
-            logger.log(Level.ERROR, "Error retrieving Reorders: " + e.getMessage());
-            throw new RuntimeException("Failed to retrieve Reorders", e);
+            logger.log(Level.ERROR, "Fehler beim Abrufen des Lagerbestands für Produkt-ID " + produktId + ": " + e.getMessage());
+            e.printStackTrace();
         } finally {
             try {
                 if (rs != null) rs.close();
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
+                if (con != null) con.close();
             } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
-        return reorders;
-    }
-
-    public synchronized void updateReorder(Reorder reorder) {
-        Connection conn = null;
-        PreparedStatement ps = null;
-        try {
-            conn = DriverManager.getConnection(dbUrl);
-            String sql = "UPDATE REORDER SET produkt_id = ?, lagerplatz_id = ?, menge = ?, bestell_datum = ?, status = ? WHERE id = ?";
-            ps = conn.prepareStatement(sql);
-            ps.setInt(1, reorder.getProduktId());
-            ps.setInt(2, reorder.getLagerPlatzId());
-            ps.setInt(3, reorder.getMenge());
-            ps.setLong(4, reorder.getBestellDatum());
-            ps.setString(5, reorder.getStatus());
-            ps.setInt(6, reorder.getId());
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            logger.log(Level.ERROR, "Error updating Reorder: " + e.getMessage());
-            throw new RuntimeException("Failed to update Reorder", e);
-        } finally {
-            try {
-                if (ps != null) ps.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
+        return model;
     }
 }

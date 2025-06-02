@@ -13,7 +13,15 @@ import thw.edu.javaII.port.warehouse.model.LagerBestand;
 import thw.edu.javaII.port.warehouse.model.LagerPlatz;
 import thw.edu.javaII.port.warehouse.ui.common.Communicator;
 import thw.edu.javaII.port.warehouse.ui.common.Session;
-
+/**
+ * Ein Dialogfenster zum Hinzufügen eines neuen Produkts und seines Lagerbestands.
+ * Ermöglicht die Eingabe von Name, Hersteller, Preis, Anzahl und die Auswahl eines Lagerplatzes.
+ * Die Eingaben werden über den Communicator an den Server gesendet.
+ *
+ * @author [Lennart Höpfner]
+ * @version 1.0
+ * @since 2025-06-01
+ */
 public class AddProdukt extends JDialog {
     private static final long serialVersionUID = 4L;
     private JTextField nameField, herstellerField, preisField, anzahlField;
@@ -27,7 +35,9 @@ public class AddProdukt extends JDialog {
         initComponents();
         setLocationRelativeTo(parent);
     }
-
+    /**
+     * Initialisiert die Benutzeroberfläche mit Eingabefeldern, einer Lagerplatz-Combobox und Buttons.
+     */
     private void initComponents() {
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -99,6 +109,10 @@ public class AddProdukt extends JDialog {
 
         setSize(400, 250);
     }
+    /**
+     * Lädt verfügbare freie Lagerplätze vom Server und füllt die Combobox.
+     * Deaktiviert den Speichern-Button, wenn keine Lagerplätze verfügbar sind.
+     */
 
     private void loadFreeLagerPlatz() {
         LagerPlatz[] freeLagerPlatz = communicator.getFreeLagerPlatz();
@@ -112,6 +126,11 @@ public class AddProdukt extends JDialog {
             saveButton.setEnabled(false);
         }
     }
+    /**
+     * Speichert ein neues Produkt und den zugehörigen Lagerbestand.
+     * Überprüft die Eingaben auf Korrektheit und sendet die Anfrage an den Server.
+     * Zeigt Erfolgs- oder Fehlermeldungen an.
+     */
 
     private void saveProdukt() {
         try {
@@ -149,6 +168,12 @@ public class AddProdukt extends JDialog {
             JOptionPane.showMessageDialog(this, "Fehler: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
         }
     }
+    /**
+     * Ein DocumentFilter, der nur Dezimalzahlen erlaubt (z. B. 12.34).
+     * Zeigt eine Warnung an, wenn ungültige Zeichen eingegeben werden.
+     *
+     * @param fieldName Der Name des Feldes, um die Fehlermeldung zu personalisieren.
+     */
 
     // DocumentFilter für Dezimalzahlen (Preis)
     private class DecimalNumberFilter extends DocumentFilter {
@@ -195,6 +220,12 @@ public class AddProdukt extends JDialog {
             }
         }
     }
+    /**
+     * Ein DocumentFilter, der nur Ganzzahlen erlaubt.
+     * Zeigt eine Warnung an, wenn ungültige Zeichen eingegeben werden.
+     *
+     * @param fieldName Der Name des Feldes, um die Fehlermeldung zu personalisieren.
+     */
 
     // DocumentFilter für Ganzzahlen (Anzahl)
     private class IntegerNumberFilter extends DocumentFilter {

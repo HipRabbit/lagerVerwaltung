@@ -3,6 +3,7 @@ package thw.edu.javaII.port.warehouse.ui.panels;
 import java.awt.*;
 import javax.swing.*;
 import java.io.IOException;
+
 import thw.edu.javaII.port.warehouse.model.LagerPlatz;
 import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
 import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
@@ -11,10 +12,11 @@ import thw.edu.javaII.port.warehouse.model.deo.Command;
 import thw.edu.javaII.port.warehouse.ui.common.Session;
 import thw.edu.javaII.port.warehouse.model.common.Cast;
 import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.Collections;
 
 public class LagerPlatzPage extends JPanel {
-	private static final long serialVersionUID = 328328L;
+    private static final long serialVersionUID = 328328L;
     private Session ses;
     private JTable table;
     private LagerPlatzTableModel tableModel;
@@ -23,17 +25,38 @@ public class LagerPlatzPage extends JPanel {
         this.ses = ses;
         setLayout(new BorderLayout());
         initializeUI();
+
+        // Standard-Sortierung nach Kapazität aufsteigend nach dem Laden der Daten
+        tableModel.sortByCapacity(false);
     }
 
     private void initializeUI() {
+        // Oberes Panel für Titel, Suche und Sortierbuttons
         JPanel topPanel = new JPanel(new BorderLayout());
-        JLabel lblTitle = new JLabel("Lagerplätze Übersicht");
+
+        // Titel
+        JLabel lblTitle = new JLabel("Lagerplatzübersicht");
         lblTitle.setFont(new Font("Arial", Font.BOLD, 16));
         topPanel.add(lblTitle, BorderLayout.NORTH);
+
+        // Suchpanel (oben links)
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JLabel lblIdSearch = new JLabel("Nach ID suchen:");
+        JTextField idField = new JTextField(10);
+        idField.setToolTipText("Geben Sie die Lagerplatz-ID ein (mind. 4 Ziffern)");
+        JButton btnSearch = new JButton("Suchen");
+        JButton btnReset = new JButton("Zurücksetzen");
+
+        searchPanel.add(lblIdSearch);
+        searchPanel.add(idField);
+        searchPanel.add(btnSearch);
+        searchPanel.add(btnReset);
+        topPanel.add(searchPanel, BorderLayout.SOUTH);
 
         JPanel sortPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JToggleButton sortByIdButton = new JToggleButton("Sortieren nach ID");
         JToggleButton sortByNameButton = new JToggleButton("Sortieren nach Name");
+        JToggleButton sortByCapacityButton = new JToggleButton("Sortieren nach Kapazität");
 
         sortByIdButton.addActionListener(e -> {
             boolean ascending = !sortByIdButton.isSelected();
@@ -41,6 +64,8 @@ public class LagerPlatzPage extends JPanel {
             sortByIdButton.setText(ascending ? "Sortieren nach ID ↑" : "Sortieren nach ID ↓");
             sortByNameButton.setSelected(false);
             sortByNameButton.setText("Sortieren nach Name");
+            sortByCapacityButton.setSelected(false);
+            sortByCapacityButton.setText("Sortieren nach Kapazität");
             updateSortIndicator(0, ascending); // Spalte 0 (ID)
         });
 
@@ -50,11 +75,25 @@ public class LagerPlatzPage extends JPanel {
             sortByNameButton.setText(ascending ? "Sortieren nach Name ↑" : "Sortieren nach Name ↓");
             sortByIdButton.setSelected(false);
             sortByIdButton.setText("Sortieren nach ID");
+            sortByCapacityButton.setSelected(false);
+            sortByCapacityButton.setText("Sortieren nach Kapazität");
             updateSortIndicator(1, ascending); // Spalte 1 (Name)
+        });
+
+        sortByCapacityButton.addActionListener(e -> {
+            boolean ascending = !sortByCapacityButton.isSelected();
+            tableModel.sortByCapacity(ascending);
+            sortByCapacityButton.setText(ascending ? "Sortieren nach Kapazität ↑" : "Sortieren nach Kapazität ↓");
+            sortByIdButton.setSelected(false);
+            sortByIdButton.setText("Sortieren nach ID");
+            sortByNameButton.setSelected(false);
+            sortByNameButton.setText("Sortieren nach Name");
+            updateSortIndicator(2, ascending); // Spalte 2 (Kapazität)
         });
 
         sortPanel.add(sortByIdButton);
         sortPanel.add(sortByNameButton);
+        sortPanel.add(sortByCapacityButton);
         topPanel.add(sortPanel, BorderLayout.CENTER);
 
         add(topPanel, BorderLayout.NORTH);
@@ -101,6 +140,35 @@ public class LagerPlatzPage extends JPanel {
         table.getTableHeader().setDefaultRenderer(new SortIndicatorHeaderRenderer(table.getTableHeader().getDefaultRenderer()));
         add(new JScrollPane(table), BorderLayout.CENTER);
 
+        // Event-Handler für Suche
+        btnSearch.addActionListener(e -> {
+            try {
+                String idText = idField.getText().trim();
+                if (idText.length() < 4) {
+                    JOptionPane.showMessageDialog(this, "Bitte geben Sie mindestens 4 Ziffern ein!", "Hinweis", JOptionPane.INFORMATION_MESSAGE);
+                    return; // Beende die Ausführung, Tabelle bleibt unverändert
+                }
+                int id = Integer.parseInt(idText);
+                LagerPlatz lagerplatz = ses.getCommunicator().getLagerPlatzById(id);
+                if (lagerplatz != null && lagerplatz.getId() > 0 && lagerplatz.getName() != null && !lagerplatz.getName().isEmpty()) {
+                    tableModel.setSingleLagerPlatz(lagerplatz);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Lagerplatz mit ID " + id + " nicht gefunden!", "Hinweis", JOptionPane.INFORMATION_MESSAGE);
+                    // Tabelle unverändert lassen, keine Änderung an tableModel
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Bitte geben Sie eine gültige numerische ID ein!", "Hinweis", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException | ClassNotFoundException ex) {
+                JOptionPane.showMessageDialog(this, "Fehler bei der Kommunikation: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Event-Handler für Zurücksetzen
+        btnReset.addActionListener(e -> {
+            idField.setText("");
+            refresh();
+        });
+
         refresh();
     }
 
@@ -134,12 +202,19 @@ class LagerPlatzTableModel extends javax.swing.table.AbstractTableModel {
     /**
 	 * 
 	 */
-	private static final long serialVersionUID = 2013234800154998283L;
-	private java.util.List<LagerPlatz> data = new java.util.ArrayList<>();
+    private static final long serialVersionUID = 2013234800154998283L;
+    private java.util.List<LagerPlatz> data = new java.util.ArrayList<>();
     private String[] columnNames = {"ID", "Name", "Kapazität", "Lager"};
 
     public void setData(java.util.List<LagerPlatz> data) {
         this.data = data != null ? data : new java.util.ArrayList<>();
+        fireTableDataChanged();
+    }
+    public void setSingleLagerPlatz(LagerPlatz lagerplatz) {
+        this.data = new ArrayList<>();
+        if (lagerplatz != null) {
+            this.data.add(lagerplatz);
+        }
         fireTableDataChanged();
     }
 
@@ -160,7 +235,13 @@ class LagerPlatzTableModel extends javax.swing.table.AbstractTableModel {
         Collections.sort(data, comparator);
         fireTableDataChanged();
     }
-
+    
+    public void sortByCapacity(boolean ascending) {
+        Comparator<LagerPlatz> comparator = Comparator.comparingInt(LagerPlatz::getKapazitaet);
+        if (!ascending) comparator = comparator.reversed();
+        Collections.sort(data, comparator);
+        fireTableDataChanged();
+    }
     @Override
     public int getRowCount() {
         return data.size();

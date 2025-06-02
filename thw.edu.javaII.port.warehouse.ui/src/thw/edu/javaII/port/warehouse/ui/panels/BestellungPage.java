@@ -7,6 +7,8 @@ import thw.edu.javaII.port.warehouse.ui.model.BestellungOverviewTableModel;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -17,6 +19,11 @@ public class BestellungPage extends JPanel {
     private JTable bestellungTable;
     private BestellungOverviewTableModel tableModel;
     private JLabel statusLabel;
+    // Instanzvariablen für Filterkriterien
+    private Date currentStartDate;
+    private Date currentEndDate;
+    private Double currentMinAmount;
+    private Integer currentProductId;
 
     public BestellungPage(Session session) {
         this.session = session;
@@ -35,18 +42,14 @@ public class BestellungPage extends JPanel {
         bestellungTable.setRowHeight(25);
 
         bestellungTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
-            /**
-			 * 
-			 */
-			private static final long serialVersionUID = 1L;
+            private static final long serialVersionUID = 1L;
 
-			@Override
+            @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 BestellungOverviewTableModel model = (BestellungOverviewTableModel) table.getModel();
 
                 int modelRow = table.convertRowIndexToModel(row);
-              
 
                 boolean isComplete = model.isBestellungComplete(modelRow);
                 boolean hasAtLeastTwoTimestamps = model.countSetTimestamps(modelRow) >= 2;
@@ -79,6 +82,16 @@ public class BestellungPage extends JPanel {
             bestellungTable.getColumnModel().getColumn(i).setCellRenderer(bestellungTable.getDefaultRenderer(Object.class));
         }
 
+        // Doppelklick-Listener hinzufügen
+        bestellungTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) { // Doppelklick erkannt
+                    openDetailView();
+                }
+            }
+        });
+
         JScrollPane scrollPane = new JScrollPane(bestellungTable);
         add(scrollPane, BorderLayout.CENTER);
 
@@ -95,21 +108,27 @@ public class BestellungPage extends JPanel {
         filterPanel.setFilterListener(new FilterPanel.FilterListener() {
             @Override
             public void onFilter(Date startDate, Date endDate, Double minAmount, Integer productId) {
-                loadFilteredBestellungen(startDate, endDate, minAmount, productId);
+                // Speichere die Filterkriterien
+                currentStartDate = startDate;
+                currentEndDate = endDate;
+                currentMinAmount = minAmount;
+                currentProductId = productId;
+                updateTable();
             }
 
             @Override
             public void onReset() {
-                loadBestellungen();
+                // Setze Filterkriterien zurück
+                currentStartDate = null;
+                currentEndDate = null;
+                currentMinAmount = null;
+                currentProductId = null;
+                updateTable();
             }
         });
         southPanel.add(filterPanel, BorderLayout.NORTH);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton refreshButton = new JButton("Aktualisieren");
-        refreshButton.addActionListener(e -> refresh());
-        buttonPanel.add(refreshButton);
-
         JButton detailButton = new JButton("Details anzeigen");
         detailButton.addActionListener(e -> openDetailView());
         buttonPanel.add(detailButton);
@@ -118,12 +137,13 @@ public class BestellungPage extends JPanel {
         addBestellungButton.addActionListener(e -> {
             JFrame parentFrame = (JFrame) SwingUtilities.getAncestorOfClass(JFrame.class, this);
             AddBestellung dialog = new AddBestellung(parentFrame, session, getParentContentPane());
-            if(!dialog.isDisplayable()) {
-            	return;
+            if (!dialog.isDisplayable()) {
+                return;
             }
             dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
             dialog.setModalityType(JDialog.ModalityType.APPLICATION_MODAL);
             dialog.setVisible(true);
+            updateTable(); // Aktualisiere Tabelle nach Hinzufügen
         });
         buttonPanel.add(addBestellungButton);
 
@@ -136,7 +156,7 @@ public class BestellungPage extends JPanel {
 
         add(southContainer, BorderLayout.SOUTH);
 
-        loadBestellungen();
+        updateTable(); // Initiale Daten laden
     }
 
     private void deleteBestellung() {
@@ -152,20 +172,20 @@ public class BestellungPage extends JPanel {
                 try {
                     boolean success = session.getCommunicator().deleteBestellung(selectedBestellung);
                     if (success) {
-                        JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht!", 
+                        JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht!",
                             "Erfolg", JOptionPane.INFORMATION_MESSAGE);
-                        refresh();
+                        updateTable(); // Aktualisiere mit aktuellen Filterkriterien
                     } else {
-                        JOptionPane.showMessageDialog(this, "Fehler beim Löschen der Bestellung!", 
+                        JOptionPane.showMessageDialog(this, "Fehler beim Löschen der Bestellung!",
                             "Fehler", JOptionPane.ERROR_MESSAGE);
                     }
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Löschen: " + ex.getMessage(), 
+                    JOptionPane.showMessageDialog(this, "Fehler beim Löschen: " + ex.getMessage(),
                         "Fehler", JOptionPane.ERROR_MESSAGE);
                 }
             }
         } else {
-            JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung aus.", 
+            JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung aus.",
                 "Warnung", JOptionPane.WARNING_MESSAGE);
         }
     }
@@ -206,42 +226,30 @@ public class BestellungPage extends JPanel {
                 erfasst, inBearbeitung, fertig, formattedRevenue));
     }
 
-    private void loadBestellungen() {
+    public void updateTable() { // Geändert von private zu public
         try {
-            List<Bestellung> bestellungen = session.getCommunicator().getBestellungen();
-            System.out.println("loadBestellungen: Anzahl geladener Bestellungen=" + (bestellungen != null ? bestellungen.size() : 0));
+            List<Bestellung> bestellungen;
+            if (currentStartDate != null || currentEndDate != null || currentMinAmount != null || currentProductId != null) {
+                // Lade gefilterte Bestellungen
+                bestellungen = session.getCommunicator().getFilteredBestellungen(
+                    currentStartDate, currentEndDate, currentMinAmount, currentProductId);
+                System.out.println("updateTable: Anzahl gefilterter Bestellungen=" + (bestellungen != null ? bestellungen.size() : 0));
+            } else {
+                // Lade alle Bestellungen
+                bestellungen = session.getCommunicator().getBestellungen();
+                System.out.println("updateTable: Anzahl geladener Bestellungen=" + (bestellungen != null ? bestellungen.size() : 0));
+            }
             if (bestellungen == null) {
                 bestellungen = new ArrayList<>();
-                System.out.println("loadBestellungen: Bestellungen war null, leere Liste verwendet");
+                System.out.println("updateTable: Bestellungen war null, leere Liste verwendet");
             }
             tableModel.setData(bestellungen);
-            System.out.println("loadBestellungen: Tabelle aktualisiert mit " + bestellungen.size() + " Bestellungen");
+            System.out.println("updateTable: Tabelle aktualisiert mit " + bestellungen.size() + " Bestellungen");
             updateStatusCounts();
         } catch (Exception e) {
             System.err.println("Fehler beim Laden der Bestellungen: " + e.getMessage());
             JOptionPane.showMessageDialog(this, "Fehler beim Laden der Bestellungen: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    private void loadFilteredBestellungen(Date startDate, Date endDate, Double minAmount, Integer productId) {
-        try {
-            List<Bestellung> bestellungen = session.getCommunicator().getFilteredBestellungen(startDate, endDate, minAmount, productId);
-            System.out.println("loadFilteredBestellungen: Anzahl gefilterter Bestellungen=" + (bestellungen != null ? bestellungen.size() : 0));
-            if (bestellungen == null) {
-                bestellungen = new ArrayList<>();
-                System.out.println("loadFilteredBestellungen: Bestellungen war null, leere Liste verwendet");
-            }
-            tableModel.setData(bestellungen);
-            System.out.println("loadFilteredBestellungen: Tabelle aktualisiert mit " + bestellungen.size() + " Bestellungen");
-            updateStatusCounts();
-        } catch (Exception e) {
-            System.err.println("Fehler beim Laden der gefilterten Bestellungen: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Fehler beim Laden der gefilterten Bestellungen: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    public void refresh() {
-        loadBestellungen();
     }
 
     private void openDetailView() {
@@ -251,7 +259,7 @@ public class BestellungPage extends JPanel {
             Bestellung selectedBestellung = tableModel.getBestellungAt(modelRow);
             BestellungDetailDialog detailDialog = new BestellungDetailDialog(null, session, selectedBestellung);
             detailDialog.setVisible(true);
-            refresh();
+            updateTable(); // Aktualisiere mit aktuellen Filterkriterien
         } else {
             JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung aus.", "Warnung", JOptionPane.WARNING_MESSAGE);
         }

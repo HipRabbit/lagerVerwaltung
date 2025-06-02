@@ -22,16 +22,26 @@ import thw.edu.javaII.port.warehouse.model.deo.Zone;
 import thw.edu.javaII.port.warehouse.model.LagerBestand;
 import thw.edu.javaII.port.warehouse.model.LagerPlatz;
 import thw.edu.javaII.port.warehouse.model.Produkt;
-import thw.edu.javaII.port.warehouse.model.Reorder;
 import thw.edu.javaII.port.warehouse.model.Kunde;
+import thw.edu.javaII.port.warehouse.model.Lager;
 import thw.edu.javaII.port.warehouse.model.Bestellung;
 import thw.edu.javaII.port.warehouse.model.BestellungProdukt;
 
+/**
+ * Handelt die Kommunikation zwischen Client und Server im Lagerverwaltungssystem.
+ * Sendet Anfragen und empfängt Antworten über eine Socket-Verbindung.
+ *
+ * @author Lennart Höpfner
+ */
 public class Communicator {
     private ObjectInputStream fromServer;
     private ObjectOutputStream toServer;
     private Socket sock;
 
+    /**
+     * Konstruktor für den Communicator. Stellt eine Verbindung zum Server her
+     * und initialisiert die Input/Output-Streams.
+     */
     public Communicator() {
         try {
             sock = new Socket(Info.NAME_SERVER, Info.PORT_SERVER);
@@ -43,16 +53,29 @@ public class Communicator {
         }
     }
 
+    /**
+     * Sendet eine Anfrage an den Server und gibt die Antwort zurück.
+     *
+     * @param deo die zu sendende {@link WarehouseDEO}-Anfrage
+     * @return die empfangene {@link WarehouseReturnDEO}-Antwort
+     * @throws IOException wenn ein Kommunikationsfehler auftritt
+     * @throws ClassNotFoundException wenn das empfangene Objekt nicht deserialisiert werden kann
+     */
     public WarehouseReturnDEO sendRequest(WarehouseDEO deo) throws IOException, ClassNotFoundException {
         try {
             toServer.writeObject(deo);
             toServer.flush();
             return (WarehouseReturnDEO) fromServer.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            throw e; // Weiterwerfen der Ausnahme an den Aufrufer
+            throw e;
         }
     }
 
+    /**
+     * Ruft die Liste der Lagerbestände ab.
+     *
+     * @return die Liste der {@link LagerBestand}-Objekte oder null bei einem Fehler
+     */
     public List<LagerBestand> getBestand() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -66,6 +89,11 @@ public class Communicator {
         return null;
     }
 
+    /**
+     * Berechnet den Gesamtwert des Lagerbestands basierend auf Produktpreisen und Mengen.
+     *
+     * @return der Gesamtwert des Lagerbestands oder 0.0 bei einem Fehler
+     */
     public double calculateTotalInventoryValue() {
         List<LagerBestand> lagerBestandList = getBestand();
         if (lagerBestandList == null || lagerBestandList.isEmpty()) {
@@ -82,6 +110,11 @@ public class Communicator {
         return totalValue;
     }
 
+    /**
+     * Ruft die Top-10-Lagerbestände nach Menge ab.
+     *
+     * @return die Liste der Top-10-{@link LagerBestand}-Objekte oder null bei einem Fehler
+     */
     public List<LagerBestand> getTOP10Bestand() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -95,6 +128,11 @@ public class Communicator {
         return null;
     }
 
+    /**
+     * Ruft die niedrigsten 10 Lagerbestände nach Menge ab.
+     *
+     * @return die Liste der niedrigsten 10 {@link LagerBestand}-Objekte oder null bei einem Fehler
+     */
     public List<LagerBestand> getLOW10Bestand() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -108,6 +146,12 @@ public class Communicator {
         return null;
     }
 
+    /**
+     * Durchsucht die Lagerbestände nach einem Suchbegriff.
+     *
+     * @param search der Suchbegriff
+     * @return die Liste der passenden {@link LagerBestand}-Objekte oder null bei einem Fehler
+     */
     public List<LagerBestand> search(String search) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -122,6 +166,12 @@ public class Communicator {
         return null;
     }
 
+    /**
+     * Aktualisiert einen Lagerbestand.
+     *
+     * @param mod der zu aktualisierende {@link LagerBestand}
+     * @return die Serverantwort als {@link WarehouseReturnDEO} oder null bei einem Fehler
+     */
     public WarehouseReturnDEO updateLagerBestand(LagerBestand mod) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -135,6 +185,11 @@ public class Communicator {
         return null;
     }
 
+    /**
+     * Ruft die Liste der freien Lagerplätze ab.
+     *
+     * @return ein Array von freien {@link LagerPlatz}-Objekten oder null bei einem Fehler
+     */
     public LagerPlatz[] getFreeLagerPlatz() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -164,6 +219,9 @@ public class Communicator {
         return null;
     }
 
+    /**
+     * Schließt die Verbindung zum Server.
+     */
     public void close() {
         try {
             if (fromServer != null)
@@ -177,6 +235,13 @@ public class Communicator {
         }
     }
 
+    /**
+     * Fügt ein Produkt und den zugehörigen Lagerbestand hinzu.
+     *
+     * @param p das {@link Produkt}-Objekt
+     * @param l der {@link LagerBestand}-Objekt
+     * @return true, wenn erfolgreich, sonst false
+     */
     public boolean addProdukt(Produkt p, LagerBestand l) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -217,6 +282,9 @@ public class Communicator {
         }
     }
 
+    /**
+     * Beendet den Server.
+     */
     public void closeServer() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -238,6 +306,12 @@ public class Communicator {
         }
     }
 
+    /**
+     * Ruft einen Kunden anhand seiner ID ab.
+     *
+     * @param id die Kunden-ID
+     * @return das {@link Kunde}-Objekt oder null bei einem Fehler
+     */
     public Kunde getKundeById(int id) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -252,6 +326,12 @@ public class Communicator {
         return null;
     }
 
+    /**
+     * Fügt einen neuen Kunden hinzu.
+     *
+     * @param k das {@link Kunde}-Objekt
+     * @return true, wenn erfolgreich, sonst false
+     */
     public boolean addKunde(Kunde k) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -266,6 +346,12 @@ public class Communicator {
         return false;
     }
 
+    /**
+     * Aktualisiert einen bestehenden Kunden.
+     *
+     * @param k das {@link Kunde}-Objekt
+     * @return true, wenn erfolgreich, sonst false
+     */
     public boolean updateKunde(Kunde k) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -280,6 +366,12 @@ public class Communicator {
         return false;
     }
 
+    /**
+     * Löscht einen Kunden.
+     *
+     * @param k das {@link Kunde}-Objekt
+     * @return true, wenn erfolgreich, sonst false
+     */
     public boolean deleteKunde(Kunde k) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -294,6 +386,11 @@ public class Communicator {
         return false;
     }
 
+    /**
+     * Ruft die Liste aller Kunden ab.
+     *
+     * @return die Liste der {@link Kunde}-Objekte oder eine leere Liste bei einem Fehler
+     */
     public List<Kunde> getKunden() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -307,6 +404,11 @@ public class Communicator {
         return new ArrayList<>();
     }
 
+    /**
+     * Ruft die nächste verfügbare Kunden-ID ab.
+     *
+     * @return die nächste Kunden-ID oder -1 bei einem Fehler
+     */
     public int getNextKundeId() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -333,6 +435,12 @@ public class Communicator {
         }
     }
 
+    /**
+     * Fügt eine neue Bestellung hinzu.
+     *
+     * @param bestellung das {@link Bestellung}-Objekt
+     * @return true, wenn erfolgreich, sonst false
+     */
     public boolean addBestellung(Bestellung bestellung) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -355,6 +463,12 @@ public class Communicator {
         }
     }
 
+    /**
+     * Ruft die Bestellungen eines Kunden anhand seiner ID ab.
+     *
+     * @param kundeId die Kunden-ID
+     * @return die Liste der {@link Bestellung}-Objekte oder eine leere Liste bei einem Fehler
+     */
     public List<Bestellung> getBestellungenByKunde(int kundeId) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -369,6 +483,15 @@ public class Communicator {
         return new ArrayList<>();
     }
 
+    /**
+     * Ruft gefilterte Bestellungen basierend auf den angegebenen Kriterien ab.
+     *
+     * @param startDate das Startdatum
+     * @param endDate das Enddatum
+     * @param minAmount der Mindestbetrag
+     * @param productId die Produkt-ID
+     * @return die Liste der gefilterten {@link Bestellung}-Objekte oder eine leere Liste bei einem Fehler
+     */
     public List<Bestellung> getFilteredBestellungen(Date startDate, Date endDate, Double minAmount, Integer productId) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -389,6 +512,11 @@ public class Communicator {
         }
     }
 
+    /**
+     * Ruft die Liste aller Produkte ab.
+     *
+     * @return die Liste der {@link Produkt}-Objekte oder null bei einem Fehler
+     */
     public List<Produkt> getProdukte() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -402,6 +530,12 @@ public class Communicator {
         return null;
     }
 
+    /**
+     * Ruft den verfügbaren Bestand für ein bestimmtes Produkt ab.
+     *
+     * @param produktId die Produkt-ID
+     * @return die Gesamtmenge im Bestand oder -1 bei einem Fehler
+     */
     public int getAvailableStockForProduct(int produktId) {
         try {
             List<LagerBestand> bestand = getBestand();
@@ -438,6 +572,12 @@ public class Communicator {
         }
     }
 
+    /**
+     * Ruft die Details einer Bestellung anhand ihrer ID ab und gibt sie formatiert aus.
+     *
+     * @param bestellungId die Bestell-ID
+     * @return das {@link Bestellung}-Objekt oder null bei einem Fehler
+     */
     public Bestellung getBestellungDetails(int bestellungId) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -491,6 +631,12 @@ public class Communicator {
         }
     }
 
+    /**
+     * Aktualisiert eine bestehende Bestellung.
+     *
+     * @param bestellung das {@link Bestellung}-Objekt
+     * @return true, wenn erfolgreich, sonst false
+     */
     public boolean updateBestellung(Bestellung bestellung) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -505,6 +651,12 @@ public class Communicator {
         }
     }
 
+    /**
+     * Löscht eine Bestellung.
+     *
+     * @param bestellung das {@link Bestellung}-Objekt
+     * @return true, wenn erfolgreich, sonst false
+     */
     public boolean deleteBestellung(Bestellung bestellung) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -521,6 +673,11 @@ public class Communicator {
         }
     }
 
+    /**
+     * Ruft die Liste aller Bestellungen ab.
+     *
+     * @return die Liste der {@link Bestellung}-Objekte oder eine leere Liste bei einem Fehler
+     */
     public List<Bestellung> getBestellungen() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -552,6 +709,9 @@ public class Communicator {
         }
     }
 
+    /**
+     * Testet das Abrufen von Bestellungsdetails durch Benutzereingabe.
+     */
     public void testBestellungDetails() {
         try (Scanner scanner = new Scanner(System.in)) {
             System.out.print("Geben Sie die Bestell-ID ein: ");
@@ -563,69 +723,122 @@ public class Communicator {
             }
         }
     }
-    public boolean sendReorder(Reorder reorder) {
-        try {
-            WarehouseDEO deo = new WarehouseDEO();
-            deo.setZone(Zone.REORDER);
-            deo.setCommand(Command.ADD);
-            deo.setData(reorder);
-            WarehouseReturnDEO response = sendRequest(deo);
-            return response.getStatus().equals(Status.OK);
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return false;
+
+    /**
+     * Ruft ein Lager anhand seiner ID ab.
+     *
+     * @param id die Lager-ID
+     * @return das {@link Lager}-Objekt oder null bei einem Fehler
+     * @throws IOException wenn ein Kommunikationsfehler auftritt
+     * @throws ClassNotFoundException wenn das empfangene Objekt nicht deserialisiert werden kann
+     */
+    public Lager getLagerById(int id) throws IOException, ClassNotFoundException {
+        WarehouseDEO deo = new WarehouseDEO();
+        deo.setZone(Zone.LAGER);
+        deo.setCommand(Command.SEARCH);
+        deo.setData(id);
+        WarehouseReturnDEO response = sendRequest(deo);
+        
+        System.out.println("getLagerById: Serverantwort Status=" + response.getStatus() + 
+                           ", Message=" + response.getMessage() + 
+                           ", Data=" + (response.getData() != null ? response.getData().toString() : "null"));
+        
+        if (response.getStatus() == Status.OK) {
+            Lager lager = Cast.safeCast(response.getData(), Lager.class);
+            if (lager != null) {
+                System.out.println("getLagerById: ID=" + lager.getId() + 
+                                   ", Name=" + lager.getName() + 
+                                   ", Ort=" + lager.getOrt() + 
+                                   ", Art=" + lager.getArt());
+                return lager;
+            } else {
+                System.out.println("getLagerById: Kein gültiges Lager-Objekt für ID=" + id);
+                return null;
+            }
+        } else {
+            System.err.println("getLagerById: Fehler vom Server für ID=" + id + ": " + response.getMessage());
+            return null;
         }
     }
 
-    public List<Reorder> getAllReorders() {
-        try {
-            WarehouseDEO deo = new WarehouseDEO();
-            deo.setZone(Zone.REORDER);
-            deo.setCommand(Command.LIST);
-            WarehouseReturnDEO response = sendRequest(deo);
-            return Cast.safeListCast(response.getData(), Reorder.class);
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+    /**
+     * Ruft einen Lagerplatz anhand seiner ID ab.
+     *
+     * @param id die Lagerplatz-ID
+     * @return das {@link LagerPlatz}-Objekt oder null bei einem Fehler
+     * @throws IOException wenn ein Kommunikationsfehler auftritt
+     * @throws ClassNotFoundException wenn das empfangene Objekt nicht deserialisiert werden kann
+     */
+    public LagerPlatz getLagerPlatzById(int id) throws IOException, ClassNotFoundException {
+        WarehouseDEO deo = new WarehouseDEO();
+        deo.setZone(Zone.LAGERPLATZ);
+        deo.setCommand(Command.SEARCH);
+        deo.setData(id);
+        WarehouseReturnDEO response = sendRequest(deo);
+        return Cast.safeCast(response.getData(), LagerPlatz.class);
     }
 
-    public boolean updateReorder(Reorder reorder) {
-        try {
-            WarehouseDEO deo = new WarehouseDEO();
-            deo.setZone(Zone.REORDER);
-            deo.setCommand(Command.UPDATE);
-            deo.setData(reorder);
-            WarehouseReturnDEO response = sendRequest(deo);
-            return response.getStatus().equals(Status.OK);
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return false;
-        }
+    /**
+     * Ruft ein Produkt anhand seiner ID ab.
+     *
+     * @param id die Produkt-ID
+     * @return das {@link Produkt}-Objekt oder null bei einem Fehler
+     * @throws IOException wenn ein Kommunikationsfehler auftritt
+     * @throws ClassNotFoundException wenn das empfangene Objekt nicht deserialisiert werden kann
+     */
+    public Produkt getProduktById(int id) throws IOException, ClassNotFoundException {
+        WarehouseDEO deo = new WarehouseDEO();
+        deo.setZone(Zone.PRODUKT);
+        deo.setCommand(Command.SEARCH);
+        deo.setData(id);
+        WarehouseReturnDEO response = sendRequest(deo);
+        return Cast.safeCast(response.getData(), Produkt.class);
     }
-    public LagerPlatz getLagerPlatzById(int id) {
+
+    /**
+     * Erstellt eine Inventur der Lagerbestände.
+     *
+     * @return die Liste der {@link LagerBestand}-Objekte oder null bei einem Fehler
+     */
+    public List<LagerBestand> createInventur() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
-            deo.setZone(Zone.LAGERPLATZ);
-            deo.setCommand(Command.GETBYID);
-            deo.setData(id);
+            deo.setZone(Zone.LAGERBESTAND);
+            deo.setCommand(Command.INVENTUR);
+            deo.setData(null);
             WarehouseReturnDEO response = sendRequest(deo);
-            return Cast.safeCast(response.getData(), LagerPlatz.class);
+            return Cast.safeListCast(response.getData(), LagerBestand.class);
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
             return null;
         }
     }
-
-    public Produkt getProduktById(int id) {
+    public int getNextLagerPlatzId() throws IOException, ClassNotFoundException {
+        WarehouseDEO deo = new WarehouseDEO();
+        deo.setZone(Zone.LAGERPLATZ);
+        deo.setCommand(Command.GETNEXTID);
+        WarehouseReturnDEO response = sendRequest(deo);
+        if (response.getStatus() == Status.OK) {
+            Integer nextId = Cast.safeCast(response.getData(), Integer.class);
+            return nextId != null ? nextId : -1;
+        }
+        throw new RuntimeException("Konnte nächste LagerPlatz-ID nicht abrufen: " + response.getMessage());
+    }
+    /**
+     * Fügt einen neuen Lagerplatz hinzu.
+     *
+     * @param lagerPlatz das {@link LagerPlatz}-Objekt
+     * @return die Serverantwort als {@link WarehouseReturnDEO} oder null bei einem Fehler
+     */
+    public WarehouseReturnDEO addLagerPlatz(LagerPlatz lagerPlatz) {
         try {
             WarehouseDEO deo = new WarehouseDEO();
-            deo.setZone(Zone.PRODUKT);
-            deo.setCommand(Command.GETBYID);
-            deo.setData(id);
-            WarehouseReturnDEO response = sendRequest(deo);
-            return Cast.safeCast(response.getData(), Produkt.class);
+            deo.setZone(Zone.LAGERPLATZ);
+            deo.setCommand(Command.ADD);
+            deo.setData(lagerPlatz);
+            return sendRequest(deo);
         } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Fehler beim Hinzufügen des Lagerplatzes: " + e.getMessage());
             e.printStackTrace();
             return null;
         }

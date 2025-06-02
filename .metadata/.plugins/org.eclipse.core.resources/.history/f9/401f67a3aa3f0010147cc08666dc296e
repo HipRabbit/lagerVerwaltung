@@ -1,0 +1,53 @@
+package thw.edu.javaII.port.warehouse.model.deo;
+
+/**
+ * Definiert die verschiedenen Zonen (Kategorien) des Lagerverwaltungssystems.
+ * 
+ * @author Lennart Höpfner
+ */
+public enum Zone {
+    /**
+     * Zone für die Initialisierung der Datenbasis.
+     */
+    INIT,
+
+    /**
+     * Zone für Lagerinformationen.
+     */
+    LAGER,
+
+    /**
+     * Zone für Lagerbestandsinformationen.
+     */
+    LAGERBESTAND,
+
+    /**
+     * Zone für Lagerplatzinformationen.
+     */
+    LAGERPLATZ,
+
+    /**
+     * Zone für Produktinformationen.
+     */
+    PRODUKT,
+
+    /**
+     * Zone für statistische Informationen.
+     */
+    STATISTIK,
+
+    /**
+     * Zone für allgemeine Informationen oder Operationen.
+     */
+    GENERAL,
+
+    /**
+     * Zone für Kundeninformationen.
+     */
+    KUNDE,
+
+    /**
+     * Zone für Bestellungsinformationen.
+     */
+    BESTELLUNG
+}

@@ -1,7 +1,7 @@
 package thw.edu.javaII.port.warehouse.server.init;
 
 import thw.edu.javaII.port.warehouse.init.Initializer;
-import thw.edu.javaII.port.warehouse.model.Reorder;
+import thw.edu.javaII.port.warehouse.server.data.Database;
 import thw.edu.javaII.port.warehouse.server.data.IStorage;
 
 public class Loading {
@@ -24,8 +24,10 @@ public class Loading {
             store.initKunde(init.getKunden());
             System.out.println("Initialisiere Bestellung...");
             store.initBestellung(init.getBestellung()); // Korrekter Methodenname
+            System.out.println("Initialisiere Nachbestellungen...");
+            store.initNachbestellung();
+            ((Database)store).initNachbestellungenFromProdukte();
             System.out.println("Datenbankinitialisierung abgeschlossen.");
-            store.initReorder(); // Erstellt die Tabelle
         } catch (Exception e) {
             System.err.println("Fehler bei der Initialisierung: " + e.getMessage());
             e.printStackTrace();

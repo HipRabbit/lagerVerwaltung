@@ -8,10 +8,14 @@ import thw.edu.javaII.port.warehouse.model.Lager;
 import thw.edu.javaII.port.warehouse.model.LagerBestand;
 import thw.edu.javaII.port.warehouse.model.LagerPlatz;
 import thw.edu.javaII.port.warehouse.model.Produkt;
-import thw.edu.javaII.port.warehouse.model.Reorder;
 import thw.edu.javaII.port.warehouse.model.Kunde;
 
-
+/**
+ * Initialisiert die Datenbasis für das Lagerverwaltungssystem durch das Erstellen und Befüllen von Listen
+ * für Lager, Lagerplätze, Lagerbestände, Produkte, Kunden, Bestellungen und Demo-Modelle.
+ * 
+ * @author Lennart Höpfner
+ */
 public class Initializer {
     private List<Lager> lager;
     private List<LagerPlatz> lagerplatz;
@@ -20,8 +24,10 @@ public class Initializer {
     private List<DemoModel> demo;
     private List<Kunde> kunden;
     private List<Bestellung> bestellung;
-    private List<Reorder> reorders;
 
+    /**
+     * Konstruktor, der die Listen initialisiert und die Methode {@link #init()} aufruft, um die Datenbasis zu füllen.
+     */
     public Initializer() {
         lager = new ArrayList<>();
         lagerplatz = new ArrayList<>();
@@ -30,41 +36,76 @@ public class Initializer {
         demo = new ArrayList<>();
         kunden = new ArrayList<>();
         bestellung = new ArrayList<>();
-        reorders = new ArrayList<>();
         init();
     }
 
+    /**
+     * Gibt die Liste der Lager zurück.
+     * 
+     * @return die Liste der {@link Lager}-Objekte
+     */
     public List<Lager> getLager() {
         return lager;
     }
 
+    /**
+     * Gibt die Liste der Lagerplätze zurück.
+     * 
+     * @return die Liste der {@link LagerPlatz}-Objekte
+     */
     public List<LagerPlatz> getLagerplatz() {
         return lagerplatz;
     }
 
+    /**
+     * Gibt die Liste der Lagerbestände zurück.
+     * 
+     * @return die Liste der {@link LagerBestand}-Objekte
+     */
     public List<LagerBestand> getLagerbestand() {
         return lagerbestand;
     }
 
+    /**
+     * Gibt die Liste der Produkte zurück.
+     * 
+     * @return die Liste der {@link Produkt}-Objekte
+     */
     public List<Produkt> getProdukt() {
         return produkt;
     }
 
+    /**
+     * Gibt die Liste der Demo-Modelle zurück.
+     * 
+     * @return die Liste der {@link DemoModel}-Objekte
+     */
     public List<DemoModel> getDemo() {
         return demo;
     }
 
+    /**
+     * Gibt die Liste der Kunden zurück.
+     * 
+     * @return die Liste der {@link Kunde}-Objekte
+     */
     public List<Kunde> getKunden() {
         return kunden;
     }
-    public List<Bestellung> getBestellung(){
-    	return bestellung;
-    }
-    public List<Reorder> getReorders() { // Neu
-        return reorders;
-    }
-    
 
+    /**
+     * Gibt die Liste der Bestellungen zurück.
+     * 
+     * @return die Liste der {@link Bestellung}-Objekte
+     */
+    public List<Bestellung> getBestellung() {
+        return bestellung;
+    }
+
+    /**
+     * Initialisiert die Datenbasis durch das Hinzufügen von vordefinierten Lager-, Produkt-, Lagerplatz-, 
+     * Lagerbestand-, Kunden- und Demo-Daten.
+     */
     private void init() {
         lager.add(new Lager(1000, "Hauptlager", "Heilbronn", "Hochregallager"));
         lager.add(new Lager(1100, "Verkauflager", "Stuttgart", "Halle"));
@@ -188,22 +229,20 @@ public class Initializer {
         demo.add(new DemoModel(1, "Hallo"));
         demo.add(new DemoModel(2, "Welt"));
         demo.add(new DemoModel(3, "Erde"));
-        
-        
-//Neu
+
         kunden.add(new Kunde(1, "Max", "Mustermann", "Musterstraße 1, 80331 München", "Musterstraße 1, 80331 München"));
-        kunden.add(new Kunde(2, "Erika", " Beispiel", "Beispielweg 2, 50667 Köln", "Beispielweg 2, 50667 Köln"));
-        kunden.add(new Kunde(3, "Anna",  "Schmidt", "Schillerstraße 10, 70173 Stuttgart", "Schillerstraße 10, 70173 Stuttgart"));
-        kunden.add(new Kunde(4, "Klaus",  "Meier", "Goethestraße 5, 70173 Stuttgart", "Goethestraße 5, 70173 Stuttgart"));
+        kunden.add(new Kunde(2, "Erika", "Beispiel", "Beispielweg 2, 50667 Köln", "Beispielweg 2, 50667 Köln"));
+        kunden.add(new Kunde(3, "Anna", "Schmidt", "Schillerstraße 10, 70173 Stuttgart", "Schillerstraße 10, 70173 Stuttgart"));
+        kunden.add(new Kunde(4, "Klaus", "Meier", "Goethestraße 5, 70173 Stuttgart", "Goethestraße 5, 70173 Stuttgart"));
         kunden.add(new Kunde(5, "Sophie", "Weber", "Bahnhofstraße 20, 80331 München", "Bahnhofstraße 20, 80331 München"));
-        
-     // Reorder-Testdaten
-        reorders.add(new Reorder(1, 1010, 2130, 50, System.currentTimeMillis() - 86400000, "ABGESCHLOSSEN")); // Mars-Schokoriegel, gestern
-        reorders.add(new Reorder(2, 1050, 1070, 500, System.currentTimeMillis(), "AUSSTEHEND")); // Mutter M8, heute
     }
 
-       
-
+    /**
+     * Sucht ein Lager anhand seiner ID.
+     * 
+     * @param id die ID des gesuchten Lagers
+     * @return das {@link Lager}-Objekt mit der angegebenen ID oder {@code null}, wenn nicht gefunden
+     */
     private Lager getLagerByID(int id) {
         for (Lager l : lager) {
             if (l.getId() == id)
@@ -212,6 +251,12 @@ public class Initializer {
         return null;
     }
 
+    /**
+     * Sucht ein Produkt anhand seiner ID.
+     * 
+     * @param id die ID des gesuchten Produkts
+     * @return das {@link Produkt}-Objekt mit der angegebenen ID oder {@code null}, wenn nicht gefunden
+     */
     private Produkt getProduktByID(int id) {
         for (Produkt l : produkt) {
             if (l.getId() == id)
@@ -220,6 +265,12 @@ public class Initializer {
         return null;
     }
 
+    /**
+     * Sucht einen Lagerplatz anhand seiner ID.
+     * 
+     * @param id die ID des gesuchten Lagerplatzes
+     * @return das {@link LagerPlatz}-Objekt mit der angegebenen ID oder {@code null}, wenn nicht gefunden
+     */
     private LagerPlatz getLagerPlatzByID(int id) {
         for (LagerPlatz l : lagerplatz) {
             if (l.getId() == id)
@@ -227,6 +278,4 @@ public class Initializer {
         }
         return null;
     }
-    //Neu
-
 }

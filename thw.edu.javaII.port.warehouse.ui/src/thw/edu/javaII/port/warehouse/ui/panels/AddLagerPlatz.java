@@ -16,7 +16,7 @@ import thw.edu.javaII.port.warehouse.ui.common.Session;
 public class AddLagerPlatz extends JDialog {
     private static final long serialVersionUID = 3L;
     private Session ses;
-    private JTextField txtId, txtName, txtKapazitaet;
+    private JTextField txtName, txtKapazitaet;
     private JComboBox<Lager> cbLager;
     private JButton btnSave, btnCancel;
 
@@ -28,18 +28,13 @@ public class AddLagerPlatz extends JDialog {
 
     private void initializeUI() {
         setLayout(new MigLayout("fill, wrap 2", "[left][grow, left]", "[]"));
-        setSize(450, 300);
+        setSize(450, 250); // Kleinere Höhe, da ID-Feld entfernt
         setLocationRelativeTo(getParent());
 
         // Eingabefelder mit DocumentFilter
-        add(new JLabel("ID:"), "align left");
-        txtId = new JTextField(20);
-        ((AbstractDocument) txtId.getDocument()).setDocumentFilter(new NumberOnlyFilter("ID"));
-        add(txtId, "growx, align left");
-
         add(new JLabel("Name:"), "align left");
         txtName = new JTextField(20);
-        ((AbstractDocument) txtName.getDocument()).setDocumentFilter(new LetterOnlyFilter());
+        ((AbstractDocument) txtName.getDocument()).setDocumentFilter(new LetterOnlyFilter(txtName));
         add(txtName, "growx, align left");
 
         add(new JLabel("Kapazität:"), "align left");
@@ -83,7 +78,6 @@ public class AddLagerPlatz extends JDialog {
 
     private void saveLagerPlatz() {
         try {
-            int id = Integer.parseInt(txtId.getText().trim());
             String name = txtName.getText().trim();
             int kapazitaet = Integer.parseInt(txtKapazitaet.getText().trim());
             Lager lager = (Lager) cbLager.getSelectedItem();
@@ -93,27 +87,24 @@ public class AddLagerPlatz extends JDialog {
                 return;
             }
 
-            LagerPlatz lagerPlatz = new LagerPlatz(id, name, kapazitaet, lager);
-            WarehouseDEO deo = new WarehouseDEO();
-            deo.setZone(Zone.LAGERPLATZ);
-            deo.setCommand(Command.ADD);
-            deo.setData(lagerPlatz);
+            // ID wird serverseitig generiert, daher 0 setzen
+            LagerPlatz lagerPlatz = new LagerPlatz(0, name, kapazitaet, lager);
+            WarehouseReturnDEO ret = ses.getCommunicator().addLagerPlatz(lagerPlatz);
 
-            WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
             if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
-                JOptionPane.showMessageDialog(this, "Lagerplatz erfolgreich angelegt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Lagerplatz erfolgreich angelegt: " + ret.getMessage(), "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 dispose();
             } else {
                 JOptionPane.showMessageDialog(this, ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
             }
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Ungültige ID oder Kapazität. Bitte geben Sie Zahlen ein.", "Fehler", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Ungültige Kapazität. Bitte geben Sie eine Zahl ein.", "Fehler", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Fehler: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    // DocumentFilter für nur Zahlen
+    // NumberOnlyFilter und LetterOnlyFilter bleiben unverändert
     private class NumberOnlyFilter extends DocumentFilter {
         private boolean hasShownWarning = false;
         private String fieldName;
@@ -156,40 +147,51 @@ public class AddLagerPlatz extends JDialog {
         }
     }
 
-    // DocumentFilter für nur Buchstaben und Leerzeichen
-    private class LetterOnlyFilter extends DocumentFilter {
+    public class LetterOnlyFilter extends DocumentFilter {
         private boolean hasShownWarning = false;
+        private JTextField textField;
 
-        @Override
-        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
-            if (string == null) return;
-            if (string.matches("[a-zA-ZäöüÄÖÜß\\s]*")) {
-                super.insertString(fb, offset, string, attr);
-                hasShownWarning = false;
-            } else {
-                handleInvalidInput();
-            }
+        public LetterOnlyFilter(JTextField textField) {
+            this.textField = textField;
         }
 
         @Override
         public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
             if (text == null) return;
-            if (text.matches("[a-zA-ZäöüÄÖÜß\\s]*")) {
+            if (text.matches("[a-zA-ZäöüÄÖÜß0-9\\s]*")) {
                 super.replace(fb, offset, length, text, attrs);
+                textField.setBorder(UIManager.getBorder("TextField.border"));
                 hasShownWarning = false;
             } else {
-                handleInvalidInput();
+                Toolkit.getDefaultToolkit().beep();
+                textField.setBorder(BorderFactory.createLineBorder(Color.RED));
+                if (!hasShownWarning) {
+                    JOptionPane.showMessageDialog(textField.getTopLevelAncestor(),
+                        "Nur Buchstaben (a-z, A-Z, Umlaute), Zahlen (0-9) und Leerzeichen sind im Feld Name erlaubt.",
+                        "Ungültige Eingabe",
+                        JOptionPane.WARNING_MESSAGE);
+                    hasShownWarning = true;
+                }
             }
         }
 
-        private void handleInvalidInput() {
-            Toolkit.getDefaultToolkit().beep();
-            if (!hasShownWarning) {
-                JOptionPane.showMessageDialog(AddLagerPlatz.this,
-                    "Nur Buchstaben (a-z, A-Z, Umlaute und Leerzeichen) sind im Feld Name erlaubt.",
-                    "Ungültige Eingabe",
-                    JOptionPane.WARNING_MESSAGE);
-                hasShownWarning = true;
+        @Override
+        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
+            if (string == null) return;
+            if (string.matches("[a-zA-ZäöüÄÖÜß0-9\\s]*")) {
+                super.insertString(fb, offset, string, attr);
+                textField.setBorder(UIManager.getBorder("TextField.border"));
+                hasShownWarning = false;
+            } else {
+                Toolkit.getDefaultToolkit().beep();
+                textField.setBorder(BorderFactory.createLineBorder(Color.RED));
+                if (!hasShownWarning) {
+                    JOptionPane.showMessageDialog(textField.getTopLevelAncestor(),
+                        "Nur Buchstaben (a-z, A-Z, Umlaute), Zahlen (0-9) und Leerzeichen sind im Feld Name erlaubt.",
+                        "Ungültige Eingabe",
+                        JOptionPane.WARNING_MESSAGE);
+                    hasShownWarning = true;
+                }
             }
         }
     }

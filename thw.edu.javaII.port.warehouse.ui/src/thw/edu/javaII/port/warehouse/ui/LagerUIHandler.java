@@ -15,19 +15,36 @@ import thw.edu.javaII.port.warehouse.model.deo.Zone;
 import thw.edu.javaII.port.warehouse.ui.common.Session;
 import thw.edu.javaII.port.warehouse.ui.panels.*;
 
+/**
+ * Verarbeitet Aktionen der Menüpunkte in der Lagerverwaltungs-Benutzeroberfläche.
+ *
+ * @author Lennart Höpfner
+ */
 public class LagerUIHandler implements ActionListener {
     private Session ses;
     private JFrame frame, parent;
     private JPanel contentPane;
 
+    /**
+     * Konstruktor für den LagerUIHandler.
+     *
+     * @param ses die {@link Session} für die Benutzerinteraktion
+     * @param frame das Haupt-{@link JFrame}
+     * @param contentPane das {@link JPanel} für den Inhalt
+     * @param parent das übergeordnete {@link JFrame}
+     */
     public LagerUIHandler(Session ses, JFrame frame, JPanel contentPane, JFrame parent) {
-        super();
         this.ses = ses;
         this.frame = frame;
         this.contentPane = contentPane;
         this.parent = parent;
     }
 
+    /**
+     * Verarbeitet Menüaktionen und wechselt die angezeigten Inhalte.
+     *
+     * @param e das {@link ActionEvent}
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
         MenuActionCommands command = MenuActionCommands.valueOf(e.getActionCommand());
@@ -46,6 +63,7 @@ public class LagerUIHandler implements ActionListener {
             case SERVERBEENDEN:
                 ses.getCommunicator().closeServer();
                 frame.dispose();
+                break;
             case DATENBANK:
                 try {
                     WarehouseDEO deo = new WarehouseDEO();
@@ -85,46 +103,40 @@ public class LagerUIHandler implements ActionListener {
                 contentPane.add(new InfoPage(), BorderLayout.CENTER);
                 frame.setVisible(true);
                 break;
-                //Paul
             case KUNDEN_DATENBANK:
                 layout = (BorderLayout) contentPane.getLayout();
                 contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
                 contentPane.add(new SearchKunde(ses, parent), BorderLayout.CENTER);
                 frame.setVisible(true);
                 break;
-                //Bjarne und bisschen Lennart
             case BESTELLUNG_PAGE:
                 layout = (BorderLayout) contentPane.getLayout();
                 contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
                 contentPane.add(new BestellungPage(ses), BorderLayout.CENTER);
                 frame.setVisible(true);
                 break;
-                
-                //Lennart
             case LAGER:
                 layout = (BorderLayout) contentPane.getLayout();
                 contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
                 contentPane.add(new LagerPage(ses), BorderLayout.CENTER);
                 frame.setVisible(true);
                 break;
-                //Lennart
             case LAGERPLATZ:
                 layout = (BorderLayout) contentPane.getLayout();
                 contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
                 contentPane.add(new LagerPlatzPage(ses), BorderLayout.CENTER);
                 frame.setVisible(true);
                 break;
-                //Lennart
             case PRODUKT:
                 layout = (BorderLayout) contentPane.getLayout();
                 contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
                 contentPane.add(new ProduktPage(ses), BorderLayout.CENTER);
                 frame.setVisible(true);
                 break;
-            case REORDER_PAGE:
+            case NACHBESTELLUNG:
                 layout = (BorderLayout) contentPane.getLayout();
                 contentPane.remove(layout.getLayoutComponent(BorderLayout.CENTER));
-                contentPane.add(new ReorderPage(ses), BorderLayout.CENTER);
+                contentPane.add(new NachbestellungPage(ses), BorderLayout.CENTER);
                 frame.setVisible(true);
                 break;
             default:

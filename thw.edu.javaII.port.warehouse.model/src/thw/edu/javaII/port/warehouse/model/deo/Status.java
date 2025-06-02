@@ -1,5 +1,23 @@
 package thw.edu.javaII.port.warehouse.model.deo;
 
+/**
+ * Definiert die möglichen Status für die Rückgabe von Operationen im Lagerverwaltungssystem.
+ * 
+ * @author Lennart Höpfner
+ */
 public enum Status {
-	OK, INFO, ERROR
+    /**
+     * Operation erfolgreich ausgeführt.
+     */
+    OK,
+
+    /**
+     * Operation liefert zusätzliche Informationen.
+     */
+    INFO,
+
+    /**
+     * Operation mit Fehler abgeschlossen.
+     */
+    ERROR, WARNING
 }

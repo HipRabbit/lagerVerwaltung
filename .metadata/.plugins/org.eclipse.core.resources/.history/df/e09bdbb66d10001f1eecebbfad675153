@@ -1,0 +1,582 @@
+package thw.edu.javaII.port.warehouse.client;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.List;
+import java.util.Scanner;
+
+import thw.edu.javaII.port.warehouse.model.common.Cast;
+import thw.edu.javaII.port.warehouse.model.common.Info;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.model.deo.Status;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.Lager;
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+
+public class Service {
+	private ObjectInputStream fromServer;
+	private ObjectOutputStream toServer;
+	private Socket sock;
+	private Scanner fromKeyboard;
+	private boolean run;
+
+	private final static String MENUE_FORMAT = "%-45s - [%1s]";
+
+	private void printServerOutput(WarehouseReturnDEO deo) {
+		System.out.println("Status der Anfrage: " + deo.getStatus());
+		System.out.println("Nachricht der Anfrage: " + deo.getMessage());
+	}
+
+	private void makeInputReady() {
+		System.out.print("> ");
+		System.out.flush();
+	}
+
+	private String promtAndInput(String promt) {
+		System.out.println(promt + ":");
+		makeInputReady();
+		return fromKeyboard.nextLine();
+	}
+
+	public void work() {
+		try {
+			run = true;
+			System.out.println("Client laeuft. Beenden mit Kommando quit");
+			fromKeyboard = new Scanner(System.in);
+			sock = new Socket(Info.NAME_SERVER, Info.PORT_SERVER);
+			sock.setSoTimeout(Info.TIMEOUT_CLIENT);
+			toServer = new ObjectOutputStream(sock.getOutputStream());
+			fromServer = new ObjectInputStream(sock.getInputStream());
+			while (run) {
+				System.out.println("Lagerverwaltung Menue - was moechten Sie tun?");
+				System.out.println(String.format(MENUE_FORMAT, "Lager bearbeiten", "L"));
+				System.out.println(String.format(MENUE_FORMAT, "Lagerplaetze bearbeiten", "P"));
+				System.out.println(String.format(MENUE_FORMAT, "Lagerbestaende bearbeiten", "B"));
+				System.out.println(String.format(MENUE_FORMAT, "Produkte bearbeiten", "W"));
+				System.out.println(String.format(MENUE_FORMAT, "Den initialen Prdouktdatenbestand laden", "I"));
+				System.out.println(String.format(MENUE_FORMAT, "Die Verbindung beenden", "E"));
+				System.out.println(String.format(MENUE_FORMAT, "Den Server beenden", "S"));
+				makeInputReady();
+				char command = fromKeyboard.nextLine().toUpperCase().charAt(0);
+				WarehouseDEO deo = new WarehouseDEO();
+				switch (command) {
+				case 'I':
+					deo.setZone(Zone.INIT);
+					deo.setCommand(Command.INIT);
+					toServer.writeObject(deo);
+					printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+					break;
+				case 'L':
+					handelLager();
+					break;
+				case 'W':
+					handelProdukt();
+					break;
+				case 'P':
+					handelLagerPlatz();
+					break;
+				case 'B':
+					handelLagerBestand();
+					break;
+				case 'E':
+					deo = new WarehouseDEO();
+					deo.setZone(Zone.GENERAL);
+					deo.setCommand(Command.CLOSE);
+					toServer.writeObject(deo);
+					printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+					run = false;
+					break;
+				case 'S':
+					deo = new WarehouseDEO();
+					deo.setZone(Zone.GENERAL);
+					deo.setCommand(Command.END);
+					toServer.writeObject(deo);
+					printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+					run = false;
+					sock = new Socket(Info.NAME_SERVER, Info.PORT_SERVER);
+					sock.setSoTimeout(Info.TIMEOUT_CLIENT);
+					toServer = new ObjectOutputStream(sock.getOutputStream());
+					fromServer = new ObjectInputStream(sock.getInputStream());
+					deo = new WarehouseDEO();
+					deo.setZone(Zone.GENERAL);
+					deo.setCommand(Command.END);
+					toServer.writeObject(deo);
+					printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+					break;
+				default:
+					System.out.println("Falsches Kommando verwendet");
+				}
+			}
+		} catch (ArrayIndexOutOfBoundsException ae) {
+			System.out.println("Aufruf: java MyClient <Port-Nummer>");
+		} catch (UnknownHostException ux) {
+			System.out.println("Kein DNS-Eintrag fuer " + Info.NAME_SERVER);
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			System.out.println("Fehler beim uebergeben Objekt");
+		} catch (IllegalAccessException e) {
+			// TODO add Exception-Handling
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO add Exception-Handling
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			// TODO add Exception-Handling
+			e.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			// TODO add Exception-Handling
+			e.printStackTrace();
+		} catch (SecurityException e) {
+			// TODO add Exception-Handling
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			// TODO add Exception-Handling
+			e.printStackTrace();
+		} finally {
+			try {
+				if (fromKeyboard != null)
+					fromKeyboard.close();
+				if (fromServer != null)
+					fromServer.close();
+				if (toServer != null)
+					toServer.close();
+				if (sock != null)
+					sock.close();
+			} catch (IOException e) {
+				;
+			}
+		}
+	}
+
+	private void handelLager()
+			throws IOException, ClassNotFoundException, IllegalAccessException, IllegalArgumentException,
+			InvocationTargetException, NoSuchMethodException, SecurityException, InstantiationException {
+		boolean run = true;
+		while (run) {
+			System.out.println("Lager bearbeiten - was moechten Sie tun?");
+			System.out.println(String.format(MENUE_FORMAT, "Lager anlegen", "A"));
+			System.out.println(String.format(MENUE_FORMAT, "Lager berarbeiten", "B"));
+			System.out.println(String.format(MENUE_FORMAT, "Lager loeschen", "L"));
+			System.out.println(String.format(MENUE_FORMAT, "Alle Lager anzeigen", "Z"));
+			System.out.println(String.format(MENUE_FORMAT, "Zum Hauptmenue", "H"));
+			makeInputReady();
+			char command = fromKeyboard.nextLine().toUpperCase().charAt(0);
+			WarehouseDEO deo = new WarehouseDEO();
+			switch (command) {
+			case 'A':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGER);
+				deo.setCommand(Command.ADD);
+				int id = Integer.parseInt(promtAndInput("Bitte geben Sie eine ID ein"));
+				String name = promtAndInput("Bitte geben Sie einen Namen ein");
+				String ort = promtAndInput("Bitte geben Sie einen Ort ein");
+				String art = promtAndInput("Bitte geben Sie eine Art ein");
+				Lager l = new Lager(id, name, ort, art);
+				deo.setData(l);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'B':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGER);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				WarehouseReturnDEO ret = (WarehouseReturnDEO) fromServer.readObject();
+				printList(Lager.class, ret);
+				int uid = Integer.parseInt(promtAndInput("Welche ID soll bearbeitet werden?"));
+				Lager ul = getObject(Lager.class, ret, uid);
+				String input = promtAndInput("Bitte geben Sie einen Namen ein");
+				if (input.length() != 0) {
+					ul.setName(input);
+				}
+				input = promtAndInput("Bitte geben Sie einen Ort ein");
+				if (input.length() != 0) {
+					ul.setOrt(input);
+				}
+				input = promtAndInput("Bitte geben Sie eine Art ein");
+				if (input.length() != 0) {
+					ul.setArt(input);
+				}
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGER);
+				deo.setCommand(Command.UPDATE);
+				deo.setData(ul);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'L':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGER);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				printList(Lager.class, (WarehouseReturnDEO) fromServer.readObject());
+				int did = Integer.parseInt(promtAndInput("Welche ID soll geloescht werden?"));
+				Lager dl = new Lager(did, null, null, null);
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGER);
+				deo.setCommand(Command.DELETE);
+				deo.setData(dl);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'Z':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGER);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				printList(Lager.class, (WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'H':
+				run = false;
+				break;
+			default:
+				System.out.println("Falsches Kommando verwendet");
+			}
+		}
+	}
+
+	private void handelProdukt()
+			throws IOException, ClassNotFoundException, IllegalAccessException, IllegalArgumentException,
+			InvocationTargetException, NoSuchMethodException, SecurityException, InstantiationException {
+		boolean run = true;
+		while (run) {
+			System.out.println("Produkt bearbeiten - was moechten Sie tun?");
+			System.out.println(String.format(MENUE_FORMAT, "Produkt anlegen", "A"));
+			System.out.println(String.format(MENUE_FORMAT, "Produkt berarbeiten", "B"));
+			System.out.println(String.format(MENUE_FORMAT, "Produkt loeschen", "L"));
+			System.out.println(String.format(MENUE_FORMAT, "Alle Produkte anzeigen", "Z"));
+			System.out.println(String.format(MENUE_FORMAT, "Zum Hauptmenue", "H"));
+			makeInputReady();
+			char command = fromKeyboard.nextLine().toUpperCase().charAt(0);
+			WarehouseDEO deo = new WarehouseDEO();
+			switch (command) {
+			case 'A':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.PRODUKT);
+				deo.setCommand(Command.ADD);
+				int id = Integer.parseInt(promtAndInput("Bitte geben Sie eine ID ein"));
+				String name = promtAndInput("Bitte geben Sie einen Namen ein");
+				String hersteller = promtAndInput("Bitte geben Sie einen Hersteller ein");
+				double preis = Double.parseDouble(promtAndInput("Bitte geben Sie einen Preis ein(0.0)"));
+				Produkt l = new Produkt(id, name, hersteller, preis);
+				deo.setData(l);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'B':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.PRODUKT);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				WarehouseReturnDEO ret = (WarehouseReturnDEO) fromServer.readObject();
+				printList(Produkt.class, ret);
+				int uid = Integer.parseInt(promtAndInput("Welche ID soll bearbeitet werden?"));
+				Produkt ul = getObject(Produkt.class, ret, uid);
+				String input = promtAndInput("Bitte geben Sie einen Namen ein");
+				if (input.length() != 0) {
+					ul.setName(input);
+				}
+				input = promtAndInput("Bitte geben Sie einen Herstller ein");
+				if (input.length() != 0) {
+					ul.setHersteller(input);
+				}
+				input = promtAndInput("Bitte geben Sie einen Preis ein(0.0)");
+				if (input.length() != 0) {
+					ul.setPreis(Double.parseDouble(input));
+				}
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.PRODUKT);
+				deo.setCommand(Command.UPDATE);
+				deo.setData(ul);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'L':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.PRODUKT);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				printList(Produkt.class, (WarehouseReturnDEO) fromServer.readObject());
+				int did = Integer.parseInt(promtAndInput("Welche ID soll geloescht werden?"));
+				Produkt dl = new Produkt(did, null, null, 0.0);
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.PRODUKT);
+				deo.setCommand(Command.DELETE);
+				deo.setData(dl);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'Z':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.PRODUKT);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				printList(Produkt.class, (WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'H':
+				run = false;
+				break;
+			default:
+				System.out.println("Falsches Kommando verwendet");
+			}
+		}
+	}
+
+	private void handelLagerPlatz()
+			throws IOException, ClassNotFoundException, IllegalAccessException, IllegalArgumentException,
+			InvocationTargetException, NoSuchMethodException, SecurityException, InstantiationException {
+		boolean run = true;
+		while (run) {
+			System.out.println("Lagerplatz bearbeiten - was moechten Sie tun?");
+			System.out.println(String.format(MENUE_FORMAT, "Lagerplatz anlegen", "A"));
+			System.out.println(String.format(MENUE_FORMAT, "Lagerplatz berarbeiten", "B"));
+			System.out.println(String.format(MENUE_FORMAT, "Lagerplatz loeschen", "L"));
+			System.out.println(String.format(MENUE_FORMAT, "Alle Lagerplaetze anzeigen", "Z"));
+			System.out.println(String.format(MENUE_FORMAT, "Zum Hauptmenue", "H"));
+			makeInputReady();
+			char command = fromKeyboard.nextLine().toUpperCase().charAt(0);
+			WarehouseDEO deo = new WarehouseDEO();
+			switch (command) {
+			case 'A':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERPLATZ);
+				deo.setCommand(Command.ADD);
+				int id = Integer.parseInt(promtAndInput("Bitte geben Sie eine ID ein"));
+				String name = promtAndInput("Bitte geben Sie einen Namen ein");
+				int kapa = Integer.parseInt(promtAndInput("Bitte geben Sie eine Kapazitaet ein"));
+				Lager lager = getSingelLager();
+				LagerPlatz l = new LagerPlatz(id, name, kapa, lager);
+				deo.setData(l);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'B':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERPLATZ);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				WarehouseReturnDEO ret = (WarehouseReturnDEO) fromServer.readObject();
+				printList(LagerPlatz.class, ret);
+				int uid = Integer.parseInt(promtAndInput("Welche ID soll bearbeitet werden?"));
+				LagerPlatz ul = getObject(LagerPlatz.class, ret, uid);
+				String input = promtAndInput("Bitte geben Sie einen Namen ein");
+				if (input.length() != 0) {
+					ul.setName(input);
+				}
+				input = promtAndInput("Bitte geben Sie eine Kapazität ein");
+				if (input.length() != 0) {
+					ul.setKapazitaet(Integer.parseInt(input));
+				}
+				input = promtAndInput("Bitte geben Sie eine Lager ein");
+				if (input.length() != 0) {
+					ul.setLager_id(getSingelLager());
+				}
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERPLATZ);
+				deo.setCommand(Command.UPDATE);
+				deo.setData(ul);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'L':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERPLATZ);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				printList(LagerPlatz.class, (WarehouseReturnDEO) fromServer.readObject());
+				int did = Integer.parseInt(promtAndInput("Welche ID soll geloescht werden?"));
+				LagerPlatz dl = new LagerPlatz(did, null, 0, null);
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERPLATZ);
+				deo.setCommand(Command.DELETE);
+				deo.setData(dl);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'Z':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERPLATZ);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				printList(LagerPlatz.class, (WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'H':
+				run = false;
+				break;
+			default:
+				System.out.println("Falsches Kommando verwendet");
+			}
+		}
+	}
+
+	private void handelLagerBestand()
+			throws IOException, ClassNotFoundException, IllegalAccessException, IllegalArgumentException,
+			InvocationTargetException, NoSuchMethodException, SecurityException, InstantiationException {
+		boolean run = true;
+		while (run) {
+			System.out.println("Lagerbestand bearbeiten - was moechten Sie tun?");
+			System.out.println(String.format(MENUE_FORMAT, "Lagerbestand anlegen", "A"));
+			System.out.println(String.format(MENUE_FORMAT, "Lagerbestand berarbeiten", "B"));
+			System.out.println(String.format(MENUE_FORMAT, "Lagerbestand loeschen", "L"));
+			System.out.println(String.format(MENUE_FORMAT, "Alle Lagerbestaende anzeigen", "Z"));
+			System.out.println(String.format(MENUE_FORMAT, "Zum Hauptmenue", "H"));
+			makeInputReady();
+			char command = fromKeyboard.nextLine().toUpperCase().charAt(0);
+			WarehouseDEO deo = new WarehouseDEO();
+			switch (command) {
+			case 'A':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERBESTAND);
+				deo.setCommand(Command.ADD);
+				int id = Integer.parseInt(promtAndInput("Bitte geben Sie eine ID ein"));
+				int anz = Integer.parseInt(promtAndInput("Bitte geben Sie eine Anzahl ein"));
+				LagerPlatz lagerPlatz = getSingelLagerPlatz();
+				Produkt produkt = getSingelProdukt();
+				LagerBestand l = new LagerBestand(id, anz, produkt, lagerPlatz);
+				deo.setData(l);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'B':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERBESTAND);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				WarehouseReturnDEO ret = (WarehouseReturnDEO) fromServer.readObject();
+				printList(LagerBestand.class, ret);
+				int uid = Integer.parseInt(promtAndInput("Welche ID soll bearbeitet werden?"));
+				LagerBestand ul = getObject(LagerBestand.class, ret, uid);
+				String input = promtAndInput("Bitte geben Sie eine Anzahl ein");
+				if (input.length() != 0) {
+					ul.setAnzahl(Integer.parseInt(input));
+				}
+				input = promtAndInput("Bitte geben Sie einen Lagerplatz ein");
+				if (input.length() != 0) {
+					ul.setLagerplatz_id(getSingelLagerPlatz());
+				}
+				input = promtAndInput("Bitte geben Sie ein Produkt ein");
+				if (input.length() != 0) {
+					ul.setProdukt_id(getSingelProdukt());
+				}
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERBESTAND);
+				deo.setCommand(Command.UPDATE);
+				deo.setData(ul);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'L':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERBESTAND);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				printList(LagerBestand.class, (WarehouseReturnDEO) fromServer.readObject());
+				int did = Integer.parseInt(promtAndInput("Welche ID soll geloescht werden?"));
+				LagerBestand dl = new LagerBestand(did, 0, null, null);
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERBESTAND);
+				deo.setCommand(Command.DELETE);
+				deo.setData(dl);
+				toServer.writeObject(deo);
+				printServerOutput((WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'Z':
+				deo = new WarehouseDEO();
+				deo.setZone(Zone.LAGERBESTAND);
+				deo.setCommand(Command.LIST);
+				toServer.writeObject(deo);
+				printList(LagerBestand.class, (WarehouseReturnDEO) fromServer.readObject());
+				break;
+			case 'H':
+				run = false;
+				break;
+			default:
+				System.out.println("Falsches Kommando verwendet");
+			}
+		}
+	}
+
+	private Produkt getSingelProdukt()
+			throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException,
+			IllegalArgumentException, InvocationTargetException, SecurityException, NoSuchMethodException {
+		WarehouseDEO deo = new WarehouseDEO();
+		deo.setZone(Zone.PRODUKT);
+		deo.setCommand(Command.LIST);
+		toServer.writeObject(deo);
+		WarehouseReturnDEO ret = (WarehouseReturnDEO) fromServer.readObject();
+		printList(Produkt.class, ret);
+		int uid = Integer.parseInt(promtAndInput("Welche ID soll verwendet werden?"));
+		Produkt ul = getObject(Produkt.class, ret, uid);
+		return ul;
+	}
+
+	private LagerPlatz getSingelLagerPlatz()
+			throws IOException, InstantiationException, IllegalAccessException, IllegalArgumentException,
+			InvocationTargetException, SecurityException, NoSuchMethodException, ClassNotFoundException {
+		WarehouseDEO deo = new WarehouseDEO();
+		deo.setZone(Zone.LAGERPLATZ);
+		deo.setCommand(Command.LIST);
+		toServer.writeObject(deo);
+		WarehouseReturnDEO ret = (WarehouseReturnDEO) fromServer.readObject();
+		printList(LagerPlatz.class, ret);
+		int uid = Integer.parseInt(promtAndInput("Welche ID soll verwendet werden?"));
+		LagerPlatz ul = getObject(LagerPlatz.class, ret, uid);
+		return ul;
+	}
+
+	private Lager getSingelLager()
+			throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException,
+			IllegalArgumentException, InvocationTargetException, SecurityException, NoSuchMethodException {
+		WarehouseDEO deo = new WarehouseDEO();
+		deo.setZone(Zone.LAGER);
+		deo.setCommand(Command.LIST);
+		toServer.writeObject(deo);
+		WarehouseReturnDEO ret = (WarehouseReturnDEO) fromServer.readObject();
+		printList(Lager.class, ret);
+		int uid = Integer.parseInt(promtAndInput("Welche ID soll verwendet werden?"));
+		Lager ul = getObject(Lager.class, ret, uid);
+		return ul;
+	}
+
+	private <T> T getObject(Class<T> type, WarehouseReturnDEO deo, int id)
+			throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException,
+			SecurityException, InstantiationException {
+		if (deo.getStatus() == Status.OK) {
+			if (deo.getData() != null) {
+				List<T> list = Cast.safeListCast(deo.getData(), type);
+				if (list != null) {
+					Object obj = type.getDeclaredConstructors()[0].newInstance();
+					for (T mod : list) {
+						if ((int) obj.getClass().getMethod("getId").invoke(mod) == id) {
+							return mod;
+						}
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	private <T> void printList(Class<T> type, WarehouseReturnDEO deo)
+			throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException,
+			SecurityException, NoSuchMethodException {
+		if (deo.getStatus() == Status.OK) {
+			if (deo.getData() != null) {
+				List<T> list = Cast.safeListCast(deo.getData(), type);
+				Object obj = type.getDeclaredConstructors()[0].newInstance();
+				for (T mod : list) {
+					System.out.println(obj.getClass().getMethod("toListString").invoke(mod));
+				}
+			}
+		}
+	}
+}
