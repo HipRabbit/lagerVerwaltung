@@ -21,18 +21,68 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Dialog zum Hinzufügen neuer Bestellungen im Lagerverwaltungssystem.
+ *
+ * <p>Diese Klasse erweitert JDialog und bietet eine vollständige Benutzeroberfläche
+ * zum Erstellen neuer Bestellungen, einschließlich Kundenauswahl, Produktauswahl,
+ * Mengenangaben und Bestandsprüfung.
+ *
+ * <p>Attribute:
+ * <ul>
+ *   <li>Session ses – aktuelle Benutzersitzung</li>
+ *   <li>DefaultTableModel tableModel – Tabellen-Model für Produktliste</li>
+ *   <li>List<BestellungProdukt> produkteList – Liste der bestellten Produkte</li>
+ *   <li>JComboBox<Kunde> cbKunde – Dropdown für Kundenauswahl</li>
+ *   <li>JTable table – Tabelle der bestellten Produkte</li>
+ *   <li>JLabel totalLabel – Anzeige des Gesamtpreises</li>
+ *   <li>boolean canceled – Flag für Abbruch-Status</li>
+ *   <li>JFrame parentFrame – übergeordnetes Fenster</li>
+ *   <li>JPanel contentPane – Content-Panel des Hauptfensters</li>
+ * </ul>
+ *
+ * <p>Wesentliche Methoden:
+ * <ul>
+ *   <li>AddBestellung(Frame, Session, JPanel) – Konstruktor mit UI-Initialisierung</li>
+ *   <li>initializeUI() – Erstellt die Benutzeroberfläche</li>
+ *   <li>showCustomerQueryDialog() – Dialog für Kundenauswahl/Erstellung</li>
+ *   <li>updateCustomerComboBox() – Aktualisiert Kunden-Dropdown</li>
+ *   <li>updateTableRow(int, BestellungProdukt) – Aktualisiert Tabellenzeile</li>
+ *   <li>updateTotalLabel() – Berechnet und zeigt Gesamtpreis</li>
+ *   <li>navigateToBestellungPage() – Navigation zur Bestellungsübersicht</li>
+ * </ul>
+ *
+ * @author Bjarne von Appen
+ */
 public class AddBestellung extends JDialog {
     private static final long serialVersionUID = 1L;
+    
+    /** Aktuelle Benutzersitzung */
     private Session ses;
+    /** Tabellen-Model für die Produktliste */
     private DefaultTableModel tableModel;
+    /** Liste der bestellten Produkte */
     private List<BestellungProdukt> produkteList = new ArrayList<>();
+    /** Dropdown für Kundenauswahl */
     private JComboBox<Kunde> cbKunde;
+    /** Tabelle der bestellten Produkte */
     private JTable table;
+    /** Anzeige des Gesamtpreises */
     private JLabel totalLabel;
+    /** Flag für Abbruch-Status */
     private boolean canceled = false;
+    /** Übergeordnetes Fenster */
     private JFrame parentFrame;
+    /** Content-Panel des Hauptfensters */
     private JPanel contentPane;
 
+    /**
+     * Konstruktor erstellt den Dialog zum Hinzufügen von Bestellungen.
+     *
+     * @param parent      übergeordnetes Fenster
+     * @param session     aktuelle Benutzersitzung
+     * @param contentPane Content-Panel des Hauptfensters
+     */
     public AddBestellung(Frame parent, Session session, JPanel contentPane) {
         super(parent, "Bestellung hinzufügen", true);
         this.ses = session;
@@ -42,6 +92,7 @@ public class AddBestellung extends JDialog {
         setLocationRelativeTo(parent);
         setLayout(new BorderLayout());
 
+        // Window-Closing-Verhalten definieren
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             @Override
@@ -52,17 +103,25 @@ public class AddBestellung extends JDialog {
         });
 
         initializeUI();
+        // Kundendialog anzeigen, bei Abbruch zur Bestellungsseite navigieren
         if (!showCustomerQueryDialog()) {
             navigateToBestellungPage();
         }
     }
 
+    /**
+     * Initialisiert die komplette Benutzeroberfläche des Dialogs.
+     *
+     * @author Bjarne von Appen
+     */
     private void initializeUI() {
         DecimalFormat df = new DecimalFormat("#,##0.00");
 
+        // Kunden-Dropdown initialisieren
         cbKunde = new JComboBox<>();
         updateCustomerComboBox();
 
+        // Produkt-Dropdown mit verfügbaren Produkten füllen
         JComboBox<Produkt> cbProdukt = new JComboBox<>();
         try {
             List<Produkt> produkte = ses.getCommunicator().getProdukte();
@@ -79,39 +138,33 @@ public class AddBestellung extends JDialog {
             e.printStackTrace();
         }
 
+        // UI-Komponenten erstellen
         JTextField txtAnzahl = new JTextField(5);
         JButton btnAddProdukt = new JButton("Produkt hinzufügen");
         JButton btnRemoveProdukt = new JButton("Produkt entfernen");
         JButton btnChangeQuantity = new JButton("Menge ändern");
         JButton btnSubmit = new JButton("Bestellung abschicken");
 
+        // Tabellen-Model für Bestellungsprodukte
         String[] columns = {"Hersteller", "Produktname", "Anzahl", "Einzelpreis", "Gesamtpreis"};
         tableModel = new DefaultTableModel(columns, 0) {
+            private static final long serialVersionUID = 1L;
 
-
-
-
-			/**
-			 * 
-			 */
-			private static final long serialVersionUID = 1L;
-
-			@Override
+            @Override
             public boolean isCellEditable(int row, int column) {
-                return false;
+                return false; // Tabelle nicht editierbar
             }
         };
+        
         table = new JTable(tableModel);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setRowHeight(25);
+        
+        // Währungsformatierung für Preisspalten
         table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
+            private static final long serialVersionUID = 1L;
 
-			/**
-			 * 
-			 */
-			private static final long serialVersionUID = 1L;
-
-			@Override
+            @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (value instanceof Double) {
@@ -121,16 +174,11 @@ public class AddBestellung extends JDialog {
                 return c;
             }
         });
+        
         table.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+            private static final long serialVersionUID = 3749120934505217279L;
 
-
-			/**
-			 * 
-			 */
-			private static final long serialVersionUID = 3749120934505217279L;
-
-
-			@Override
+            @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (value instanceof Double) {
@@ -140,8 +188,10 @@ public class AddBestellung extends JDialog {
                 return c;
             }
         });
+        
         JScrollPane scrollPane = new JScrollPane(table);
 
+        // Layout-Panels erstellen
         JPanel inputPanel = new JPanel(new GridLayout(3, 2));
         inputPanel.add(new JLabel("Kunde:"));
         inputPanel.add(cbKunde);
@@ -165,10 +215,12 @@ public class AddBestellung extends JDialog {
         buttonPanel.add(btnChangeQuantity);
         buttonPanel.add(btnSubmit);
 
+        // Layout zusammenfügen
         add(inputPanel, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
 
+        // Event-Listener für Buttons
         btnAddProdukt.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 try {
@@ -184,17 +236,23 @@ public class AddBestellung extends JDialog {
                                 "Hinweis: Eingabefehler", JOptionPane.INFORMATION_MESSAGE);
                         return;
                     }
+                    
+                    // Verfügbaren Bestand prüfen
                     int availableStock = ses.getCommunicator().getAvailableStockForProduct(produkt.getId());
                     if (availableStock < 0) {
                         JOptionPane.showMessageDialog(null, "Fehler beim Abrufen des Lagerbestands!",
                                 "Fehler: Bestandsprüfung", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
+                    
+                    // Prüfen, ob Produkt bereits in der Liste vorhanden
                     BestellungProdukt existingProdukt = produkteList.stream()
                             .filter(bp -> bp.getProdukt().getId() == produkt.getId())
                             .findFirst()
                             .orElse(null);
+                    
                     if (existingProdukt != null) {
+                        // Produkt bereits vorhanden: Menge erhöhen
                         int neueAnzahl = existingProdukt.getAnzahl() + anzahl;
                         if (neueAnzahl > availableStock) {
                             JOptionPane.showMessageDialog(null, "Nur " + availableStock + " Einheiten von " + produkt.getName() + " verfügbar!",
@@ -205,6 +263,7 @@ public class AddBestellung extends JDialog {
                         existingProdukt.setAnzahl(neueAnzahl);
                         updateTableRow(rowIndex, existingProdukt);
                     } else {
+                        // Neues Produkt hinzufügen
                         if (anzahl > availableStock) {
                             JOptionPane.showMessageDialog(null, "Nur " + availableStock + " Einheiten von " + produkt.getName() + " verfügbar!",
                                     "Hinweis: Bestand unzureichend", JOptionPane.INFORMATION_MESSAGE);
@@ -314,12 +373,17 @@ public class AddBestellung extends JDialog {
                                 "Hinweis: Eingabefehler", JOptionPane.INFORMATION_MESSAGE);
                         return;
                     }
+                    
+                    // Bestellung erstellen und speichern
                     Date date = new Date();
                     Bestellung bestellung = new Bestellung(kunde, date, produkteList);
                     boolean success = ses.getCommunicator().addBestellung(bestellung);
+                    
                     if (success) {
                         JOptionPane.showMessageDialog(null, "Bestellung abgeschickt",
                                 "Hinweis: Bestellung abgeschickt", JOptionPane.INFORMATION_MESSAGE);
+                        
+                        // Bestellungsdetails abrufen und Zusammenfassung anzeigen
                         Bestellung storedBestellung = ses.getCommunicator().getBestellungDetails(bestellung.getId());
                         if (storedBestellung != null) {
                             BestellungZusammenfassung summaryDialog = new BestellungZusammenfassung(
@@ -345,6 +409,13 @@ public class AddBestellung extends JDialog {
         });
     }
 
+    /**
+     * Aktualisiert eine bestimmte Zeile in der Produkttabelle.
+     *
+     * @param rowIndex Index der zu aktualisierenden Zeile
+     * @param bp       BestellungProdukt mit neuen Daten
+     * @author Bjarne von Appen
+     */
     private void updateTableRow(int rowIndex, BestellungProdukt bp) {
         Produkt p = bp.getProdukt();
         tableModel.setValueAt(p.getHersteller(), rowIndex, 0);
@@ -354,6 +425,11 @@ public class AddBestellung extends JDialog {
         tableModel.setValueAt(p.getPreis() * bp.getAnzahl(), rowIndex, 4);
     }
 
+    /**
+     * Berechnet und aktualisiert die Gesamtpreis-Anzeige.
+     *
+     * @author Bjarne von Appen
+     */
     private void updateTotalLabel() {
         DecimalFormat df = new DecimalFormat("#,##0.00");
         double total = produkteList.stream()
@@ -362,6 +438,12 @@ public class AddBestellung extends JDialog {
         totalLabel.setText("Ihre Bestellung hat einen Gesamtwert von " + df.format(total) + " €");
     }
 
+    /**
+     * Zeigt Dialog zur Kundenauswahl oder -erstellung an.
+     *
+     * @return true wenn fortgefahren werden soll, false bei Abbruch
+     * @author Bjarne von Appen
+     */
     private boolean showCustomerQueryDialog() {
         Object[] options = {"Kunde existiert", "Kunde hinzufügen"};
         int choice = JOptionPane.showOptionDialog(this,
@@ -374,6 +456,7 @@ public class AddBestellung extends JDialog {
                 options[0]);
         
         if (choice == 1) {
+            // Neuen Kunden hinzufügen
             EditKunde editKunde = new EditKunde(ses, parentFrame, null);
             editKunde.setVisible(true);
             
@@ -401,10 +484,19 @@ public class AddBestellung extends JDialog {
         return true;
     }
 
+    /**
+     * Aktualisiert die Kunden-ComboBox mit allen verfügbaren Kunden.
+     */
     private void updateCustomerComboBox() {
         updateCustomerComboBox(null);
     }
 
+    /**
+     * Aktualisiert die Kunden-ComboBox und setzt optional einen neuen Kunden an erste Stelle.
+     *
+     * @param newKunde neuer Kunde, der an erster Stelle stehen soll (optional)
+     * @author Bjarne von Appen
+     */
     private void updateCustomerComboBox(Kunde newKunde) {
         cbKunde.removeAllItems();
         try {
@@ -414,16 +506,19 @@ public class AddBestellung extends JDialog {
                 return;
             }
 
+            // Neuen Kunden zuerst hinzufügen, falls vorhanden
             if (newKunde != null) {
                 cbKunde.addItem(newKunde);
             }
 
+            // Restliche Kunden hinzufügen (außer dem neuen)
             for (Kunde kunde : kunden) {
                 if (newKunde == null || kunde.getId() != newKunde.getId()) {
                     cbKunde.addItem(kunde);
                 }
             }
 
+            // Neuen Kunden als ausgewählt setzen
             if (newKunde != null) {
                 cbKunde.setSelectedItem(newKunde);
             }
@@ -434,12 +529,22 @@ public class AddBestellung extends JDialog {
         }
     }
 
+    /**
+     * Navigiert zur Bestellungsübersichtsseite und schließt den Dialog.
+     *
+     * @author Bjarne von Appen
+     */
     private void navigateToBestellungPage() {
         dispose();
         ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, MenuActionCommands.BESTELLUNG_PAGE.toString());
         new LagerUIHandler(ses, parentFrame, contentPane, parentFrame).actionPerformed(event);
     }
 
+    /**
+     * Gibt zurück, ob der Dialog abgebrochen wurde.
+     *
+     * @return true wenn abgebrochen, false sonst
+     */
     public boolean isCanceled() {
         return canceled;
     }

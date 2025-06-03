@@ -29,24 +29,70 @@ import thw.edu.javaII.port.warehouse.model.Kunde;
 import thw.edu.javaII.port.warehouse.ui.common.Session;
 import thw.edu.javaII.port.warehouse.ui.model.KundeTableModel;
 
+/**
+ * Panel zur Suche und Verwaltung von Kunden im Lagerverwaltungssystem.
+ *
+ * <p>Diese Klasse erweitert JPanel und bietet eine umfassende Benutzeroberfläche
+ * zur Suche von Kunden nach ID oder Name, sowie zur Verwaltung von Kundendaten
+ * mit Funktionen wie Hinzufügen, Bearbeiten, Löschen und Anzeige von Bestellungen.
+ *
+ * <p>Attribute:
+ * <ul>
+ *   <li>JTable table – Tabelle zur Anzeige der Kunden</li>
+ *   <li>JTextField idField – Eingabefeld für ID-Suche</li>
+ *   <li>JTextField nameFilterField – Eingabefeld für Namensfilterung</li>
+ *   <li>JScrollPane js – Scroll-Container für die Tabelle</li>
+ *   <li>KundeTableModel model – Datenmodell für die Kundentabelle</li>
+ *   <li>JButton btnEdit – Button zum Bearbeiten von Kunden</li>
+ *   <li>JButton btnDelete – Button zum Löschen von Kunden</li>
+ *   <li>JButton btnShowBestellungen – Button zur Anzeige von Kundenbestellungen</li>
+ * </ul>
+ *
+ * <p>Wesentliche Methoden:
+ * <ul>
+ *   <li>SearchKunde(Session, JFrame) – Konstruktor mit UI-Initialisierung</li>
+ *   <li>Anonyme ActionListener für verschiedene Button-Aktionen</li>
+ *   <li>DocumentListener für dynamische Namensfilterung</li>
+ *   <li>MouseAdapter für Doppelklick-Funktionalität</li>
+ * </ul>
+ *
+ * @author Paul Hartmann
+ */
 public class SearchKunde extends JPanel {
     private static final long serialVersionUID = 123012318L;
+    
+    /** Tabelle zur Anzeige der Kunden */
     private JTable table;
+    /** Eingabefeld für ID-Suche */
     private JTextField idField;
+    /** Eingabefeld für Namensfilterung */
     private JTextField nameFilterField;
+    /** Scroll-Container für die Tabelle */
     private JScrollPane js;
+    /** Datenmodell für die Kundentabelle */
     private KundeTableModel model;
+    /** Button zum Bearbeiten von Kunden */
     private JButton btnEdit;
+    /** Button zum Löschen von Kunden */
     private JButton btnDelete;
+    /** Button zur Anzeige von Kundenbestellungen */
     private JButton btnShowBestellungen;
 
+    /**
+     * Konstruktor erstellt das Kunden-Such-Panel.
+     *
+     * @param ses    aktuelle Benutzersitzung
+     * @param parent übergeordnetes Fenster
+     */
     public SearchKunde(Session ses, JFrame parent) {
         setLayout(new BorderLayout(0, 0));
 
+        // Titel-Label
         JLabel lblNewLabel = new JLabel("Kundendatenbank");
         lblNewLabel.setFont(new Font("Lucida Grande", Font.BOLD, 16));
         add(lblNewLabel, BorderLayout.NORTH);
 
+        // Hauptpanel mit GridBagLayout
         JPanel panel = new JPanel();
         add(panel, BorderLayout.CENTER);
         GridBagLayout gbl_panel = new GridBagLayout();
@@ -56,7 +102,7 @@ public class SearchKunde extends JPanel {
         gbl_panel.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
         panel.setLayout(gbl_panel);
 
-        // ID-Suche
+        // ID-Suchbereich
         JPanel panel_1 = new JPanel();
         FlowLayout flowLayout = (FlowLayout) panel_1.getLayout();
         flowLayout.setAlignment(FlowLayout.LEFT);
@@ -97,16 +143,16 @@ public class SearchKunde extends JPanel {
         });
         panel_1.add(btnSearch);
 
-        // Neuer Zurücksetzen-Button für ID-Suche
+        // Zurücksetzen-Button für ID-Suche
         JButton btnResetId = new JButton("Zurücksetzen (ID)");
         btnResetId.addActionListener(e -> {
             idField.setText(""); // ID-Feld zurücksetzen
-            nameFilterField.setText(""); // Namensfilter zurücksetzen, um Konsistenz zu wahren
+            nameFilterField.setText(""); // Namensfilter zurücksetzen für Konsistenz
             model.setData(ses.getCommunicator().getKunden()); // Tabelle auf vollständige Kundenliste zurücksetzen
         });
         panel_1.add(btnResetId);
 
-        // Namenssuche
+        // Namensfilter-Bereich
         JPanel panel_4 = new JPanel();
         FlowLayout flowLayout_4 = (FlowLayout) panel_4.getLayout();
         flowLayout_4.setAlignment(FlowLayout.LEFT);
@@ -127,7 +173,7 @@ public class SearchKunde extends JPanel {
         JButton btnResetFilter = new JButton("Zurücksetzen");
         btnResetFilter.addActionListener(e -> {
             nameFilterField.setText("");
-            idField.setText(""); // ID-Feld ebenfalls zurücksetzen, um Konsistenz zu wahren
+            idField.setText(""); // ID-Feld ebenfalls zurücksetzen für Konsistenz
             model.setData(ses.getCommunicator().getKunden());
         });
         panel_4.add(btnResetFilter);
@@ -151,6 +197,9 @@ public class SearchKunde extends JPanel {
                 filterTable();
             }
 
+            /**
+             * Filtert die Tabelle basierend auf dem eingegebenen Suchbegriff.
+             */
             private void filterTable() {
                 String searchTerm = nameFilterField.getText().trim();
                 model.filterByName(searchTerm);
@@ -165,7 +214,7 @@ public class SearchKunde extends JPanel {
             }
         });
 
-        // Buttons für Aktionen
+        // Button-Panel für Aktionen
         JPanel panel_2 = new JPanel();
         FlowLayout flowLayout_2 = (FlowLayout) panel_2.getLayout();
         flowLayout_2.setAlignment(FlowLayout.RIGHT);
@@ -245,16 +294,13 @@ public class SearchKunde extends JPanel {
                     Kunde kunde = model.getObjectAt(selectedRow);
                     KundeBestellungen dialog = new KundeBestellungen(ses, parent, kunde);
                     dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-                    // Modalität wird jetzt in KundeBestellungen gesetzt
-                    // dialog.setModalityType(JDialog.ModalityType.APPLICATION_MODAL);
-                    // setVisible wird in KundeBestellungen aufgerufen
-                    // dialog.setVisible(true);
+                    // Modalität wird in KundeBestellungen gesetzt
                 }
             }
         });
         panel_2.add(btnShowBestellungen);
 
-        // Sortierungs-Buttons
+        // Sortierungs-Button-Panel
         JPanel panel_3 = new JPanel();
         FlowLayout flowLayout_3 = (FlowLayout) panel_3.getLayout();
         flowLayout_3.setAlignment(FlowLayout.RIGHT);
@@ -280,6 +326,7 @@ public class SearchKunde extends JPanel {
         });
         panel_3.add(btnSortName);
 
+        // Ergebnisse-Label
         JLabel lblNewLabel_1 = new JLabel("Ergebnisse");
         GridBagConstraints gbc_lblNewLabel_1 = new GridBagConstraints();
         gbc_lblNewLabel_1.fill = GridBagConstraints.HORIZONTAL;
@@ -287,12 +334,15 @@ public class SearchKunde extends JPanel {
         gbc_lblNewLabel_1.gridy = 4;
         panel.add(lblNewLabel_1, gbc_lblNewLabel_1);
 
+        // Kundentabelle initialisieren
         model = new KundeTableModel(ses.getCommunicator().getKunden());
         table = new JTable(model);
         table.setShowGrid(true);
         table.setShowVerticalLines(true);
         table.setShowHorizontalLines(true);
         table.setGridColor(Color.DARK_GRAY);
+        
+        // Selection-Listener für Button-Aktivierung
         table.getSelectionModel().addListSelectionListener(e -> {
             boolean rowSelected = table.getSelectedRowCount() == 1;
             btnEdit.setEnabled(rowSelected);
@@ -300,7 +350,7 @@ public class SearchKunde extends JPanel {
             btnShowBestellungen.setEnabled(rowSelected);
         });
 
-        // Doppelklick-Listener hinzufügen
+        // Doppelklick-Listener für Bestellungsanzeige
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -316,6 +366,7 @@ public class SearchKunde extends JPanel {
             }
         });
 
+        // Scroll-Panel für Tabelle
         js = new JScrollPane(table);
         js.setVisible(true);
         GridBagConstraints gbc_table = new GridBagConstraints();

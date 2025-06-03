@@ -13,19 +13,68 @@ import thw.edu.javaII.port.warehouse.model.deo.Command;
 import thw.edu.javaII.port.warehouse.model.common.Cast;
 import thw.edu.javaII.port.warehouse.ui.common.Session;
 
+/**
+ * Dialog zum Hinzufügen neuer Lagerplätze im Lagerverwaltungssystem.
+ *
+ * <p>Diese Klasse erweitert JDialog und bietet eine Benutzeroberfläche
+ * zum Erstellen neuer Lagerplätze mit Eingabevalidierung und automatischer
+ * ID-Generierung durch den Server.
+ *
+ * <p>Attribute:
+ * <ul>
+ *   <li>Session ses – aktuelle Benutzersitzung</li>
+ *   <li>JTextField txtName – Eingabefeld für Lagerplatzname</li>
+ *   <li>JTextField txtKapazitaet – Eingabefeld für Kapazität</li>
+ *   <li>JComboBox<Lager> cbLager – Dropdown für Lagerauswahl</li>
+ *   <li>JButton btnSave – Button zum Speichern</li>
+ *   <li>JButton btnCancel – Button zum Abbrechen</li>
+ * </ul>
+ *
+ * <p>Wesentliche Methoden:
+ * <ul>
+ *   <li>AddLagerPlatz(Session, JFrame) – Konstruktor mit UI-Initialisierung</li>
+ *   <li>initializeUI() – Erstellt die Benutzeroberfläche</li>
+ *   <li>loadLager() – Lädt verfügbare Lager in das Dropdown</li>
+ *   <li>saveLagerPlatz() – Speichert den neuen Lagerplatz</li>
+ *   <li>NumberOnlyFilter – Eingabefilter für Zahlen</li>
+ *   <li>LetterOnlyFilter – Eingabefilter für Text</li>
+ * </ul>
+ *
+ * @author Lennart Höpfner
+ */
 public class AddLagerPlatz extends JDialog {
     private static final long serialVersionUID = 3L;
+    
+    /** Aktuelle Benutzersitzung */
     private Session ses;
-    private JTextField txtName, txtKapazitaet;
+    /** Eingabefeld für Lagerplatzname */
+    private JTextField txtName;
+    /** Eingabefeld für Kapazität */
+    private JTextField txtKapazitaet;
+    /** Dropdown für Lagerauswahl */
     private JComboBox<Lager> cbLager;
-    private JButton btnSave, btnCancel;
+    /** Button zum Speichern */
+    private JButton btnSave;
+    /** Button zum Abbrechen */
+    private JButton btnCancel;
 
+    /**
+     * Konstruktor erstellt den Dialog zum Hinzufügen von Lagerplätzen.
+     *
+     * @param ses    aktuelle Benutzersitzung
+     * @param parent übergeordnetes Fenster
+     */
     public AddLagerPlatz(Session ses, JFrame parent) {
         super(parent, "Lagerplatz anlegen", true);
         this.ses = ses;
         initializeUI();
     }
 
+    /**
+     * Initialisiert die Benutzeroberfläche des Dialogs.
+     *
+     * @author Lennart Höpfner
+     */
     private void initializeUI() {
         setLayout(new MigLayout("fill, wrap 2", "[left][grow, left]", "[]"));
         setSize(450, 250); // Kleinere Höhe, da ID-Feld entfernt
@@ -56,6 +105,11 @@ public class AddLagerPlatz extends JDialog {
         add(btnCancel);
     }
 
+    /**
+     * Lädt alle verfügbaren Lager in das Dropdown-Menü.
+     *
+     * @author Lennart Höpfner
+     */
     private void loadLager() {
         try {
             WarehouseDEO deo = new WarehouseDEO();
@@ -76,6 +130,11 @@ public class AddLagerPlatz extends JDialog {
         }
     }
 
+    /**
+     * Speichert den neuen Lagerplatz nach Validierung der Eingaben.
+     *
+     * @author Lennart Höpfner
+     */
     private void saveLagerPlatz() {
         try {
             String name = txtName.getText().trim();
@@ -104,11 +163,20 @@ public class AddLagerPlatz extends JDialog {
         }
     }
 
-    // NumberOnlyFilter und LetterOnlyFilter bleiben unverändert
+    /**
+     * DocumentFilter für Eingabefelder, die nur Zahlen akzeptieren.
+     *
+     * @author Lennart Höpfner
+     */
     private class NumberOnlyFilter extends DocumentFilter {
         private boolean hasShownWarning = false;
         private String fieldName;
 
+        /**
+         * Konstruktor für den Zahlen-Filter.
+         *
+         * @param fieldName Name des Feldes für Fehlermeldungen
+         */
         public NumberOnlyFilter(String fieldName) {
             this.fieldName = fieldName;
         }
@@ -135,6 +203,9 @@ public class AddLagerPlatz extends JDialog {
             }
         }
 
+        /**
+         * Behandelt ungültige Eingaben mit Warnung.
+         */
         private void handleInvalidInput() {
             Toolkit.getDefaultToolkit().beep();
             if (!hasShownWarning) {
@@ -147,10 +218,20 @@ public class AddLagerPlatz extends JDialog {
         }
     }
 
+    /**
+     * DocumentFilter für Eingabefelder, die nur Buchstaben, Zahlen und Leerzeichen akzeptieren.
+     *
+     * @author Lennart Höpfner
+     */
     public class LetterOnlyFilter extends DocumentFilter {
         private boolean hasShownWarning = false;
         private JTextField textField;
 
+        /**
+         * Konstruktor für den Text-Filter.
+         *
+         * @param textField das zu überwachende Textfeld
+         */
         public LetterOnlyFilter(JTextField textField) {
             this.textField = textField;
         }

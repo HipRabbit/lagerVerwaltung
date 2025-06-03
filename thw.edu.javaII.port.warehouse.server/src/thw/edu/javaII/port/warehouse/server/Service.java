@@ -30,16 +30,58 @@ import thw.edu.javaII.port.warehouse.server.data.Database;
 import thw.edu.javaII.port.warehouse.server.data.IStorage;
 import thw.edu.javaII.port.warehouse.server.init.Loading;
 
+/**
+ * Service-Klasse, die in einem eigenen Thread läuft und alle
+ * Client-Anfragen am Server-Socket entgegennimmt und verarbeitet.
+ *
+ * <p>Attribute:
+ * <ul>
+ *   <li>static int count – zählt alle gestarteten Service-Instanzen</li>
+ *   <li>int currentNumber – eindeutige Nummer dieser Instanz</li>
+ *   <li>Socket sock – Client-Verbindung</li>
+ *   <li>ObjectInputStream fromClient – Eingabestream vom Client</li>
+ *   <li>ObjectOutputStream toClient – Ausgabestream zum Client</li>
+ *   <li>IStorage store – Abstraktion für Datenbankzugriffe</li>
+ *   <li>boolean run – Steuerflag für die Hauptschleife</li>
+ *   <li>Logger logger – protokolliert Ereignisse und Fehler</li>
+ * </ul>
+ *
+ * <p>Wesentliche Methoden:
+ * <ul>
+ *   <li>Service(Socket, IStorage) – Initialisiert Socket, Streams und Storage</li>
+ *   <li>run() – Hauptschleife zum Empfang und zur Verarbeitung von DEOs</li>
+ *   <li>handleZoneXxx(...) – Handler-Methoden für jede Zone</li>
+ *   <li>closeResources() – Schließt Socket und Streams sicher</li>
+ * </ul>
+ *
+ * @author Bjarne von Appen
+ * @author Paul Hartmann
+ * @author Lennart Höpfner
+ */
 public class Service extends Thread {
+    /** Zählt alle gestarteten Service-Instanzen */
     static int count = 0;
+    /** Eindeutige Nummer dieser Instanz */
     private int currentNumber = 0;
+    /** Socket-Verbindung zum Client */
     private Socket sock;
+    /** Eingabestream vom Client */
     private ObjectInputStream fromClient;
+    /** Ausgabestream zum Client */
     private ObjectOutputStream toClient;
+    /** Abstraktion für Datenbankzugriffe */
     private IStorage store;
+    /** Steuerflag für die Hauptschleife */
     private boolean run;
-    private Logger logger; // Logger hinzufügen
+    /** Protokolliert Ereignisse und Fehler */
+    private Logger logger;
 
+    /**
+     * Konstruktor initialisiert Socket, Streams und Storage.
+     *
+     * @param sock  Socket-Verbindung zum Client
+     * @param store Implementierung für Datenbankzugriffe
+     */
     public Service(Socket sock, IStorage store) {
         try {
             run = true;
@@ -47,6 +89,7 @@ public class Service extends Thread {
             this.store = store;  // Verwende die übergebene Instanz
             this.logger = System.getLogger(Info.LOG_NAME);
             currentNumber = ++count;
+            // Output-Stream zuerst erstellen, um Deadlock zu vermeiden
             toClient = new ObjectOutputStream(sock.getOutputStream());
             fromClient = new ObjectInputStream(sock.getInputStream());
         } catch (IOException e) {
@@ -54,12 +97,19 @@ public class Service extends Thread {
         }
     }
 
+    /**
+     * Hauptschleife: liest WarehouseDEO-Objekte, dispatcht an passende Handler
+     * und schreibt WarehouseReturnDEO-Objekte zurück.
+     */
     public void run() {
         logger.log(Level.INFO, "Bearbeitung für Client " + currentNumber + " gestartet");
         try {
             while (run) {
+                // DEO vom Client lesen
                 WarehouseDEO deoIn = (WarehouseDEO) fromClient.readObject();
                 WarehouseReturnDEO deoOut = null;
+                
+                // Dispatch je nach Zone
                 switch (deoIn.getZone()) {
                     case INIT:
                         deoOut = handleZoneInit(deoIn, deoOut);
@@ -82,10 +132,10 @@ public class Service extends Thread {
                     case GENERAL:
                         deoOut = handleZoneGeneral(deoIn, deoOut);
                         break; 
-                    case KUNDE://Neu
+                    case KUNDE:
                         deoOut = handleZoneKunde(deoIn, deoOut);
                         break;
-                    case BESTELLUNG: //Neu
+                    case BESTELLUNG:
                         deoOut = handleZoneBestellung(deoIn, deoOut);
                         break;
                     case NACHBESTELLUNG:
@@ -95,6 +145,7 @@ public class Service extends Thread {
                         deoOut = new WarehouseReturnDEO(null, "Unbekannte Zone", Status.ERROR);
                         break;
                 }
+                // Antwort an Client senden
                 toClient.writeObject(deoOut);
             }
         } catch (IOException e) {
@@ -102,6 +153,7 @@ public class Service extends Thread {
         } catch (ClassNotFoundException e) {
             logger.log(Level.ERROR, "Fehler beim übergebenen Objekt für Client " + currentNumber + ": " + e.getMessage());
         } finally {
+            // Ressourcen sicher schließen
             try {
                 if (fromClient != null)
                     fromClient.close();
@@ -115,7 +167,14 @@ public class Service extends Thread {
         }
         logger.log(Level.INFO, "Protokoll für Client " + currentNumber + " beendet");
     }
-//Neu
+
+    /**
+     * Bearbeitet Kunden-Befehle (ADD, DELETE, LIST, UPDATE, SEARCH, GETNEXTID).
+     *
+     * @param deoIn  übermittelte DEO mit Kommando und Daten
+     * @param deoOut Ausgabe-DEO (wird überschrieben)
+     * @return DEO mit Ergebnis und Status
+     */
     private WarehouseReturnDEO handleZoneKunde(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case ADD:
@@ -203,6 +262,13 @@ public class Service extends Thread {
         return deoOut;
     }
 
+    /**
+     * Bearbeitet Lager-Befehle (ADD, DELETE, LIST, UPDATE, SEARCH).
+     *
+     * @param deoIn  übermittelte DEO mit Kommando und Daten
+     * @param deoOut Ausgabe-DEO (wird überschrieben)
+     * @return DEO mit Ergebnis und Status
+     */
     private WarehouseReturnDEO handleZoneLager(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
         case ADD:
@@ -263,13 +329,21 @@ public class Service extends Thread {
         return deoOut;
     }
 
+    /**
+     * Bearbeitet LagerPlatz-Befehle (ADD, DELETE, LIST, UPDATE, SEARCH, GETNEXTID).
+     *
+     * @param deoIn  übermittelte DEO mit Kommando und Daten
+     * @param deoOut Ausgabe-DEO (wird überschrieben)
+     * @return DEO mit Ergebnis und Status
+     */
     private WarehouseReturnDEO handleZoneLagerPlatz(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case ADD:
                 if (deoIn.getData() != null && deoIn.getData() instanceof LagerPlatz) {
                     LagerPlatz l = Cast.safeCast(deoIn.getData(), LagerPlatz.class);
                     try {
-                        int newId = store.getNextLagerPlatzId(); // Neue ID von Database holen
+                        // Neue ID von Database holen
+                        int newId = store.getNextLagerPlatzId();
                         l.setId(newId); // ID serverseitig setzen
                         store.addLagerPlatz(l);
                         deoOut = new WarehouseReturnDEO(l, "Lagerplatz erfolgreich angelegt mit ID: " + newId, Status.OK);
@@ -340,6 +414,13 @@ public class Service extends Thread {
         return deoOut;
     }
 
+    /**
+     * Bearbeitet LagerBestand-Befehle (ADD, DELETE, LIST, UPDATE, SEARCH, INVENTUR).
+     *
+     * @param deoIn  übermittelte DEO mit Kommando und Daten
+     * @param deoOut Ausgabe-DEO (wird überschrieben)
+     * @return DEO mit Ergebnis und Status
+     */
     private WarehouseReturnDEO handleZoneLagerBestand(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
         case ADD:
@@ -381,6 +462,7 @@ public class Service extends Thread {
                     String search = Cast.safeCast(deoIn.getData(), String.class);
                     List<LagerBestand> all = store.getLagerBestands();
                     List<LagerBestand> relevantData = new ArrayList<LagerBestand>();
+                    // Durchsuche alle Bestände nach dem Suchbegriff
                     for (LagerBestand mod : all) {
                         String searchData = mod.getProdukt_id().getName() + mod.getProdukt_id().getHersteller()
                                 + mod.getLagerplatz_id().getName() + mod.getLagerplatz_id().getLager_id().getName()
@@ -395,10 +477,10 @@ public class Service extends Thread {
                     deoOut = new WarehouseReturnDEO(null, "Falsche Daten übergeben", Status.ERROR);
                 }
                 break;
-            case INVENTUR: // Neu: Inventur hinzufügen
+            case INVENTUR:
                 try {
                     List<LagerBestand> data = store.getLagerBestands();
-                    // Optional: Sortierung oder Filter anwenden, z. B. alphabetisch nach Produktname
+                    // Sortierung alphabetisch nach Produktname
                     Collections.sort(data, new BestandByProduktAlpha());
                     deoOut = new WarehouseReturnDEO(data, "Inventur erstellt: Liste aller Lagerbestände", Status.OK);
                 } catch (RuntimeException e) {
@@ -413,6 +495,13 @@ public class Service extends Thread {
         return deoOut;
     }
 
+    /**
+     * Bearbeitet Produkt-Befehle (ADD, ADD_WITH_BESTAND, DELETE, LIST, UPDATE, GETBYMODEL, SEARCH).
+     *
+     * @param deoIn  übermittelte DEO mit Kommando und Daten
+     * @param deoOut Ausgabe-DEO (wird überschrieben)
+     * @return DEO mit Ergebnis und Status
+     */
     private WarehouseReturnDEO handleZoneProdukt(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case ADD:
@@ -436,6 +525,7 @@ public class Service extends Thread {
                         Produkt produkt = Cast.safeCast(data[0], Produkt.class);
                         LagerBestand lagerBestand = Cast.safeCast(data[1], LagerBestand.class);
                         try {
+                            // Produkt und Bestand in einer Transaktion hinzufügen
                             boolean success = ((Database) store).addProduktWithBestand(produkt, lagerBestand);
                             if (success) {
                                 deoOut = new WarehouseReturnDEO(null, "Produkt und Lagerbestand erfolgreich angelegt", Status.OK);
@@ -531,6 +621,13 @@ public class Service extends Thread {
         return deoOut;
     }
 
+    /**
+     * Bearbeitet Statistik-Befehle (BESTAND, TOP, LOW).
+     *
+     * @param deoIn  übermittelte DEO mit Kommando
+     * @param deoOut Ausgabe-DEO (wird überschrieben)
+     * @return DEO mit Ergebnis und Status
+     */
     private WarehouseReturnDEO handleZoneStatistik(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case ADD:
@@ -548,7 +645,7 @@ public class Service extends Thread {
             case TOP:
                 data = store.getLagerBestands();
                 Collections.sort(data, new BestandByLagerBestand());
-                Collections.reverse(data);
+                Collections.reverse(data); // Höchste Bestände zuerst
                 List<LagerBestand> relevantData = data.stream().limit(10).collect(Collectors.toList());
                 deoOut = new WarehouseReturnDEO(relevantData, "Liste der TOP 10 Produkte nach Lagerbestand", Status.OK);
                 break;
@@ -565,6 +662,13 @@ public class Service extends Thread {
         return deoOut;
     }
 
+    /**
+     * Bearbeitet INIT-Befehle: lädt Initialdaten ins System.
+     *
+     * @param deoIn  übermittelte DEO mit INIT-Kommando
+     * @param deoOut Ausgabe-DEO (wird überschrieben)
+     * @return DEO mit Ergebnisstatus
+     */
     private WarehouseReturnDEO handleZoneInit(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case ADD:
@@ -585,6 +689,13 @@ public class Service extends Thread {
         return deoOut;
     }
 
+    /**
+     * Bearbeitet allgemeine Steuerkommandos (CLOSE, END).
+     *
+     * @param deoIn  übermittelte DEO mit Kommando
+     * @param deoOut Ausgabe-DEO (wird überschrieben)
+     * @return DEO mit Ergebnisstatus
+     */
     private WarehouseReturnDEO handleZoneGeneral(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case ADD:
@@ -596,12 +707,12 @@ public class Service extends Thread {
                 break;
             case CLOSE:
                 deoOut = new WarehouseReturnDEO(null, "Server-Verbindung wird beendet", Status.OK);
-                run = false;
+                run = false; // Beende nur diese Service-Instanz
                 break;
             case END:
                 deoOut = new WarehouseReturnDEO(null, "Server-Verbindung und Server wird beendet", Status.OK);
-                run = false;
-                Server.run = false;
+                run = false; // Beende diese Service-Instanz
+                Server.run = false; // Beende den gesamten Server
                 break;
             default:
                 deoOut = new WarehouseReturnDEO(null, "Unbekanntes Kommando", Status.ERROR);
@@ -609,7 +720,14 @@ public class Service extends Thread {
         }
         return deoOut;
     }
-//Neu
+
+    /**
+     * Bearbeitet Bestellungs-Befehle (ADD, DELETE, LIST, UPDATE, SEARCH, GETBYID, FILTER).
+     *
+     * @param deoIn  übermittelte DEO mit Kommando und Daten
+     * @param deoOut Ausgabe-DEO (wird überschrieben)
+     * @return DEO mit Ergebnis und Status
+     */
     private WarehouseReturnDEO handleZoneBestellung(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case ADD:
@@ -671,6 +789,7 @@ public class Service extends Thread {
             case FILTER:
                 if (deoIn.getData() instanceof FilterCriteria) {
                     FilterCriteria criteria = (FilterCriteria) deoIn.getData();
+                    // Filtere Bestellungen nach Kriterien
                     List<Bestellung> bestellungen = ((Database) store).getFilteredBestellungen(
                         criteria.getStartDate(), criteria.getEndDate(), 
                         criteria.getMinAmount(), criteria.getProductId()
@@ -688,12 +807,20 @@ public class Service extends Thread {
         }
         return deoOut;
     }
+
+    /**
+     * Bearbeitet Nachbestellungs-Befehle (LIST, UPDATE).
+     *
+     * @param deoIn  übermittelte DEO mit Kommando und Daten
+     * @param deoOut Ausgabe-DEO (wird überschrieben)
+     * @return DEO mit Ergebnis und Status
+     * @author Lennart Höpfner
+     */
     private WarehouseReturnDEO handleZoneNachbestellung(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case LIST:
                 deoOut = new WarehouseReturnDEO(store.getNachbestellungen(), "Liste aller Nachbestellungen", Status.OK);
                 break;
-
             case UPDATE:
                 if (deoIn.getData() != null && deoIn.getData() instanceof thw.edu.javaII.port.warehouse.model.Nachbestellung) {
                     thw.edu.javaII.port.warehouse.model.Nachbestellung n = Cast.safeCast(deoIn.getData(), thw.edu.javaII.port.warehouse.model.Nachbestellung.class);
@@ -704,6 +831,7 @@ public class Service extends Thread {
                     try {
                         LagerBestand matchingBestand = store.getLagerBestandByProduktId(n.getPid());
                         if (matchingBestand != null) {
+                            // Neue Menge = alte Menge + Nachbestellmenge
                             int neueAnzahl = matchingBestand.getAnzahl() + n.getAnzahlnachbestellung();
                             matchingBestand.setAnzahl(neueAnzahl);
                             store.updateLagerBestand(matchingBestand);

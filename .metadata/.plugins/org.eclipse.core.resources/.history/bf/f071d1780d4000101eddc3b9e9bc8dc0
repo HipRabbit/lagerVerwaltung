@@ -1,0 +1,169 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import thw.edu.javaII.port.warehouse.model.Bestellung;
+import thw.edu.javaII.port.warehouse.model.BestellungProdukt;
+import thw.edu.javaII.port.warehouse.model.Kunde;
+import thw.edu.javaII.port.warehouse.model.Produkt;
+import thw.edu.javaII.port.warehouse.ui.LagerUIHandler;
+import thw.edu.javaII.port.warehouse.ui.MenuActionCommands;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Dialog zum Hinzufügen neuer Bestellungen im Lagerverwaltungssystem.
+ *
+ * <p>Diese Klasse erweitert JDialog und bietet eine vollständige Benutzeroberfläche
+ * zum Erstellen neuer Bestellungen, einschließlich Kundenauswahl, Produktauswahl,
+ * Mengenangaben und Bestandsprüfung.
+ *
+ * <p>Attribute:
+ * <ul>
+ *   <li>Session ses – aktuelle Benutzersitzung</li>
+ *   <li>DefaultTableModel tableModel – Tabellen-Model für Produktliste</li>
+ *   <li>List<BestellungProdukt> produkteList – Liste der bestellten Produkte</li>
+ *   <li>JComboBox<Kunde> cbKunde – Dropdown für Kundenauswahl</li>
+ *   <li>JTable table – Tabelle der bestellten Produkte</li>
+ *   <li>JLabel totalLabel – Anzeige des Gesamtpreises</li>
+ *   <li>boolean canceled – Flag für Abbruch-Status</li>
+ *   <li>JFrame parentFrame – übergeordnetes Fenster</li>
+ *   <li>JPanel contentPane – Content-Panel des Hauptfensters</li>
+ * </ul>
+ *
+ * <p>Wesentliche Methoden:
+ * <ul>
+ *   <li>AddBestellung(Frame, Session, JPanel) – Konstruktor mit UI-Initialisierung</li>
+ *   <li>initializeUI() – Erstellt die Benutzeroberfläche</li>
+ *   <li>showCustomerQueryDialog() – Dialog für Kundenauswahl/Erstellung</li>
+ *   <li>updateCustomerComboBox() – Aktualisiert Kunden-Dropdown</li>
+ *   <li>updateTableRow(int, BestellungProdukt) – Aktualisiert Tabellenzeile</li>
+ *   <li>updateTotalLabel() – Berechnet und zeigt Gesamtpreis</li>
+ *   <li>navigateToBestellungPage() – Navigation zur Bestellungsübersicht</li>
+ * </ul>
+ *
+ * @author Bjarne von Appen
+ */
+public class AddBestellung extends JDialog {
+    private static final long serialVersionUID = 1L;
+    
+    /** Aktuelle Benutzersitzung */
+    private Session ses;
+    /** Tabellen-Model für die Produktliste */
+    private DefaultTableModel tableModel;
+    /** Liste der bestellten Produkte */
+    private List<BestellungProdukt> produkteList = new ArrayList<>();
+    /** Dropdown für Kundenauswahl */
+    private JComboBox<Kunde> cbKunde;
+    /** Tabelle der bestellten Produkte */
+    private JTable table;
+    /** Anzeige des Gesamtpreises */
+    private JLabel totalLabel;
+    /** Flag für Abbruch-Status */
+    private boolean canceled = false;
+    /** Übergeordnetes Fenster */
+    private JFrame parentFrame;
+    /** Content-Panel des Hauptfensters */
+    private JPanel contentPane;
+
+    /**
+     * Konstruktor erstellt den Dialog zum Hinzufügen von Bestellungen.
+     *
+     * @param parent      übergeordnetes Fenster
+     * @param session     aktuelle Benutzersitzung
+     * @param contentPane Content-Panel des Hauptfensters
+     */
+    public AddBestellung(Frame parent, Session session, JPanel contentPane) {
+        super(parent, "Bestellung hinzufügen", true);
+        this.ses = session;
+        this.parentFrame = (JFrame) parent;
+        this.contentPane = contentPane;
+        setSize(800, 600);
+        setLocationRelativeTo(parent);
+        setLayout(new BorderLayout());
+
+        // Window-Closing-Verhalten definieren
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                canceled = true;
+                navigateToBestellungPage();
+            }
+        });
+
+        initializeUI();
+        // Kundendialog anzeigen, bei Abbruch zur Bestellungsseite navigieren
+        if (!showCustomerQueryDialog()) {
+            navigateToBestellungPage();
+        }
+    }
+
+    /**
+     * Initialisiert die komplette Benutzeroberfläche des Dialogs.
+     *
+     * @author Bjarne von Appen
+     */
+    private void initializeUI() {
+        DecimalFormat df = new DecimalFormat("#,##0.00");
+
+        // Kunden-Dropdown initialisieren
+        cbKunde = new JComboBox<>();
+        updateCustomerComboBox();
+
+        // Produkt-Dropdown mit verfügbaren Produkten füllen
+        JComboBox<Produkt> cbProdukt = new JComboBox<>();
+        try {
+            List<Produkt> produkte = ses.getCommunicator().getProdukte();
+            if (produkte == null || produkte.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Keine Produkte gefunden!", "Fehler: Produkte laden", JOptionPane.ERROR_MESSAGE);
+            } else {
+                for (Produkt produkt : produkte) {
+                    cbProdukt.addItem(produkt);
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Fehler beim Laden der Produkte: " + e.getMessage(),
+                    "Fehler: Produkte laden", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+
+        // UI-Komponenten erstellen
+        JTextField txtAnzahl = new JTextField(5);
+        JButton btnAddProdukt = new JButton("Produkt hinzufügen");
+        JButton btnRemoveProdukt = new JButton("Produkt entfernen");
+        JButton btnChangeQuantity = new JButton("Menge ändern");
+        JButton btnSubmit = new JButton("Bestellung abschicken");
+
+        // Tabellen-Model für Bestellungsprodukte
+        String[] columns = {"Hersteller", "Produktname", "Anzahl", "Einzelpreis", "Gesamtpreis"};
+        tableModel = new DefaultTableModel(columns, 0) {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Tabelle nicht editierbar
+            }
+        };
+        
+        table = new JTable(tableModel);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setRowHeight(25);
+        
+        // Währungsformatierung für Preisspalten
+        table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column

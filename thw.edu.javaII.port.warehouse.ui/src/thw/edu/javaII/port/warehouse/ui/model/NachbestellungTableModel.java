@@ -7,42 +7,67 @@ import javax.swing.table.AbstractTableModel;
 
 import thw.edu.javaII.port.warehouse.model.Nachbestellung;
 
-
 /**
- * TableModel für die Anzeige von Hersteller-Daten in einer JTable.
- * 
- * @author Dennis Seifert
+ * Table-Model für die Darstellung von Nachbestellungen in einer JTable.
+ *
+ * <p>Diese Klasse erweitert AbstractTableModel und stellt Nachbestellungsdaten
+ * in tabellarischer Form dar, einschließlich Produktinformationen,
+ * aktueller Bestände und geplanter Nachbestellmengen.
+ *
+ * <p>Attribute:
+ * <ul>
+ *   <li>List<Nachbestellung> data – Liste der Nachbestellungen</li>
+ *   <li>String[] columnNames – Namen der Tabellenspalten</li>
+ * </ul>
+ *
+ * <p>Wesentliche Methoden:
+ * <ul>
+ *   <li>NachbestellungTableModel(List) – Konstruktor mit Nachbestellungsliste</li>
+ *   <li>setData(List) – Aktualisiert die Tabellendaten</li>
+ *   <li>getNachbestellungAt(int) – Gibt Nachbestellung einer bestimmten Zeile zurück</li>
+ *   <li>addNachbestellung(Nachbestellung) – Fügt neue Nachbestellung hinzu</li>
+ *   <li>removeNachbestellung(Nachbestellung) – Entfernt Nachbestellung</li>
+ *   <li>getValueAt(int, int) – Wert einer bestimmten Zelle</li>
+ * </ul>
+ *
+ * @author Bjarne von Appen
+ * @author Paul Hartmann
+ * @author Lennart Höpfner
  */
-
 public class NachbestellungTableModel extends AbstractTableModel {
     private static final long serialVersionUID = 1L;
+    
+    /** Liste der Nachbestellungen */
     private List<Nachbestellung> data;
+    /** Namen der Tabellenspalten */
     private String[] columnNames = { "P-ID", "P-Name", "Akt Bestand", "Hersteller", "Anzahl Nachbestellung", "Zukünftiger Bestand" };
 
     /**
-     * Konstruktor zur Initialisierung mit einer Liste von Herstellern.
+     * Konstruktor initialisiert das Table-Model mit einer Liste von Nachbestellungen.
      * 
-     * @param data Liste von Hersteller-Objekten
+     * @param data Liste von Nachbestellung-Objekten
      */
     public NachbestellungTableModel(List<Nachbestellung> data) {
+        // Defensive Kopie erstellen, um Originaldaten zu schützen
         this.data = new ArrayList<>(data);
     }
 
     /**
      * Setzt neue Daten für die Tabelle und aktualisiert die Ansicht.
      * 
-     * @param data Neue Liste von Herstellern
+     * @param data neue Liste von Nachbestellungen
      */
     public void setData(List<Nachbestellung> data) {
         this.data = new ArrayList<>(data);
-        fireTableDataChanged();
+        fireTableDataChanged(); // Benachrichtigt JTable über Datenänderung
     }
 
     /**
-     * Gibt ein Hersteller-Objekt an einer bestimmten Tabellenzeile zurück.
+     * Gibt eine Nachbestellung an einer bestimmten Tabellenzeile zurück.
      * 
      * @param row Zeilenindex
-     * @return Hersteller-Objekt oder null, wenn Index ungültig
+     * @return Nachbestellung-Objekt oder null, wenn Index ungültig
+     * @author Lennart Höpfner
      */
     public Nachbestellung getNachbestellungAt(int row) {
         if (row >= 0 && row < data.size()) {
@@ -52,30 +77,32 @@ public class NachbestellungTableModel extends AbstractTableModel {
     }
 
     /**
-     * Fügt einen neuen Hersteller zur Tabelle hinzu.
+     * Fügt eine neue Nachbestellung zur Tabelle hinzu.
      * 
-     * @param h Hersteller-Objekt
+     * @param h Nachbestellung-Objekt
+     * @author Lennart Höpfner
      */
-
     public void addNachbestellung(Nachbestellung h) {
         data.add(h);
+        // Benachrichtigt JTable über eingefügte Zeile
         fireTableRowsInserted(data.size() - 1, data.size() - 1);
     }
 
     /**
-     * Entfernt einen Hersteller aus der Tabelle.
+     * Entfernt eine Nachbestellung aus der Tabelle.
      * 
-     * @param h Hersteller-Objekt
+     * @param h Nachbestellung-Objekt
+     * @author Lennart Höpfner
      */
     public void removeNachbestellung(Nachbestellung h) {
         data.remove(h);
-        fireTableDataChanged();
+        fireTableDataChanged(); // Benachrichtigt JTable über Datenänderung
     }
 
     /**
-     * Gibt die Anzahl der Zeilen (Hersteller) zurück.
+     * Gibt die Anzahl der Zeilen (Nachbestellungen) zurück.
      * 
-     * @return Anzahl der Hersteller
+     * @return Anzahl der Nachbestellungen
      */
     @Override
     public int getRowCount() {
@@ -83,9 +110,9 @@ public class NachbestellungTableModel extends AbstractTableModel {
     }
 
     /**
-     * Gibt die Anzahl der Spalten zurück (ID, Name, Adresse).
+     * Gibt die Anzahl der Spalten zurück.
      * 
-     * @return Spaltenanzahl
+     * @return Spaltenanzahl (6)
      */
     @Override
     public int getColumnCount() {
@@ -95,28 +122,21 @@ public class NachbestellungTableModel extends AbstractTableModel {
     /**
      * Gibt den Wert in der angegebenen Zelle zurück.
      * 
-     * @param rowIndex Zeilenindex
+     * @param rowIndex    Zeilenindex
      * @param columnIndex Spaltenindex
-     * @return Zellwert
+     * @return Zellwert (P-ID, P-Name, aktueller Bestand, Hersteller, Nachbestellmenge oder zukünftiger Bestand)
      */
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-    	Nachbestellung h = data.get(rowIndex);
+        Nachbestellung h = data.get(rowIndex);
         switch (columnIndex) {
-            case 0:
-                return h.getPid();
-            case 1:
-                return h.getPname();
-            case 2:
-                return h.getAktuellerbestand();
-            case 3:
-                return h.getPhersteller();
-            case 4:
-                return h.getAnzahlnachbestellung();
-            case 5:
-                return h.getZukünftigerbestand();
-            default:
-                return null;
+            case 0: return h.getPid();                      // Produkt-ID
+            case 1: return h.getPname();                    // Produktname
+            case 2: return h.getAktuellerbestand();         // Aktueller Bestand
+            case 3: return h.getPhersteller();              // Hersteller
+            case 4: return h.getAnzahlnachbestellung();     // Nachbestellmenge
+            case 5: return h.getZukünftigerbestand();       // Zukünftiger Bestand
+            default: return null;
         }
     }
 
