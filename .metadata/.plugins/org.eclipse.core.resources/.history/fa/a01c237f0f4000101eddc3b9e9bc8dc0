@@ -1,0 +1,108 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import thw.edu.javaII.port.warehouse.model.Bestellung;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import java.awt.*;
+import java.text.DecimalFormat;
+
+public class BestellungZusammenfassung extends JDialog {
+    private static final long serialVersionUID = 7L;
+    public BestellungZusammenfassung(Frame parent, Session session, Bestellung bestellung) {
+        super(parent, "Bestellungszusammenfassung", true);
+        setSize(600, 400);
+        setLocationRelativeTo(parent);
+        setLayout(new BorderLayout());
+
+        // Nachricht oben in zwei Zeilen
+        JPanel messagePanel = new JPanel(new GridLayout(2, 1));
+        JLabel titleLine1 = new JLabel("Vielen Dank für ihre Bestellung");
+        titleLine1.setHorizontalAlignment(SwingConstants.CENTER);
+        JLabel titleLine2 = new JLabel("Hier sind ihre Bestellungsdetails nochmal zusammengefasst");
+        titleLine2.setHorizontalAlignment(SwingConstants.CENTER);
+        messagePanel.add(titleLine1);
+        messagePanel.add(titleLine2);
+        add(messagePanel, BorderLayout.NORTH);
+
+        // Kundeninformationen
+        JPanel infoPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+        infoPanel.add(new JLabel("Bestell-ID:"));
+        infoPanel.add(new JLabel(String.valueOf(bestellung.getId())));
+        infoPanel.add(new JLabel("Kundenname:"));
+        infoPanel.add(new JLabel(bestellung.getKunde() != null ?
+                bestellung.getKunde().getVorname() + " " + bestellung.getKunde().getNachname() : "Unbekannt"));
+        infoPanel.add(new JLabel("Lieferadresse:"));
+        infoPanel.add(new JLabel(bestellung.getKunde() != null ? bestellung.getKunde().getLieferadresse() : "Unbekannt"));
+        infoPanel.add(new JLabel("Rechnungsadresse:"));
+        infoPanel.add(new JLabel(bestellung.getKunde() != null ? bestellung.getKunde().getRechnungsadresse() : "Unbekannt"));
+        add(infoPanel, BorderLayout.CENTER);
+
+        // Produkt-Tabelle
+        String[] columns = {"Hersteller", "Produktname", "Anzahl", "Einzelpreis (EUR)", "Gesamtpreis (EUR)"};
+        Object[][] data = bestellung.getProdukte().stream().map(bp -> new Object[]{
+                bp.getProdukt().getHersteller(), // Neue Spalte Hersteller
+                bp.getProdukt().getName(),
+                bp.getAnzahl(),
+                new DecimalFormat("#,##0.00").format(bp.getProdukt().getPreis()),
+                new DecimalFormat("#,##0.00").format(bp.getProdukt().getPreis() * bp.getAnzahl())
+        }).toArray(Object[][]::new);
+        JTable table = new JTable(data, columns);
+        table.setRowHeight(25);
+        table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() { // Einzelpreis (Index 3)
+            /**
+			 * 
+			 */
+			private static final long serialVersionUID = -3263019462766882288L;
+
+			@Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                ((JLabel) c).setHorizontalAlignment(SwingConstants.RIGHT);
+                return c;
+            }
+        });
+        table.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() { // Gesamtpreis (Index 4)
+            /**
+			 * 
+			 */
+			private static final long serialVersionUID = 69371958212004999L;
+
+			@Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                ((JLabel) c).setHorizontalAlignment(SwingConstants.RIGHT);
+                return c;
+            }
+        });
+        JScrollPane scrollPane = new JScrollPane(table);
+
+        // Zentrales Panel für Tabelle
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.add(scrollPane, BorderLayout.CENTER);
+        add(centerPanel, BorderLayout.CENTER);
+
+        // Gesamtpreis und Schließen-Button
+        JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        DecimalFormat df = new DecimalFormat("#,##0.00");
+        double total = bestellung.getProdukte().stream()
+                .mapToDouble(bp -> bp.getProdukt().getPreis() * bp.getAnzahl())
+                .sum();
+        JLabel gesamtpreisLabel = new JLabel(String.format("Gesamtpreis: %s EUR", df.format(total)));
+        gesamtpreisLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        footerPanel.add(gesamtpreisLabel);
+
+        JPanel closePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton closeButton = new JButton("Schließen");
+        closeButton.addActionListener(e -> dispose());
+        closePanel.add(closeButton);
+
+        // Kombiniertes Panel für Footer und Schließen-Button
+        JPanel southPanel = new JPanel(new BorderLayout());
+        southPanel.add(footerPanel, BorderLayout.NORTH);
+        southPanel.add(closePanel, BorderLayout.SOUTH);
+
+        add(southPanel, BorderLayout.SOUTH);
+    }
+}

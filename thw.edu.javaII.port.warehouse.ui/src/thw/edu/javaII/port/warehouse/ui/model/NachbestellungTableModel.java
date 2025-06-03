@@ -10,7 +10,7 @@ import thw.edu.javaII.port.warehouse.model.Nachbestellung;
 /**
  * TableModel für die Anzeige von Hersteller-Daten in einer JTable.
  * 
- * @author Dennis Seifert
+ * @author Lennart Höpfner
  */
 public class NachbestellungTableModel extends AbstractTableModel {
     private static final long serialVersionUID = 1L;

@@ -1,0 +1,61 @@
+package thw.edu.javaII.port.warehouse.server;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
+import thw.edu.javaII.port.warehouse.server.data.IStorage;
+
+/**
+ * Service-Klasse, die als eigenen Thread läuft und
+ * eingehende Client-Anfragen am Server-Socket verarbeitet.
+ *
+ * <p>Attribute:
+ * <ul>
+ *   <li>Socket sock – Client-Verbindung</li>
+ *   <li>ObjectInputStream fromClient – Daten vom Client</li>
+ *   <li>ObjectOutputStream toClient – Daten zum Client</li>
+ *   <li>IStorage store – Abstraktion für Datenbankzugriffe</li>
+ *   <li>boolean run – Steuerflag für die Lauf­schleife</li>
+ *   <li>Logger logger – Protokolliert Ereignisse und Fehler</li>
+ * </ul>
+ *
+ * <p>Wesentliche Methoden:
+ * <ul>
+ *   <li>run() – Hauptschleife zur Entgegennahme und Behandlung von Befehlen</li>
+ *   <li>handleZoneXyz() – Spezifische Handler für unterschiedliche Zonen (z. B. LAGER, KUNDE)</li>
+ * </ul>
+ *
+ * @author Bjarne von Appen
+ * @author Paul Hartmann
+ * @author Lennart Höpfner
+ */
+public class Service extends Thread {
+    private Socket sock;
+    private ObjectInputStream fromClient;
+    private ObjectOutputStream toClient;
+    private IStorage store;
+    private boolean run;
+    private Logger logger;
+
+    /**
+     * Konstruktor initialisiert Socket, Streams und Storage.
+     *
+     * @param sock  Socket-Verbindung zum Client
+     * @param store Implementierung für Datenbankzugriffe
+     */
+    public Service(Socket sock, IStorage store) {
+        // ...
+    }
+
+    @Override
+    public void run() {
+        // Hauptlogik zur Verarbeitung von Requests
+    }
+
+    // Inline-Kommentare erläutern komplexe Logik direkt im Code
+
+    // Handler-Methoden für die einzelnen Zonen folgen hier...
+}

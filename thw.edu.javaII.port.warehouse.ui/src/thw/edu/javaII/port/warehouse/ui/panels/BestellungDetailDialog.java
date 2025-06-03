@@ -15,18 +15,66 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Dialog zur detaillierten Anzeige und Bearbeitung von Bestellungen.
+ *
+ * <p>Diese Klasse erweitert JDialog und bietet eine umfassende Benutzeroberfläche
+ * zur Anzeige von Bestellungsdetails, einschließlich Kundeninformationen,
+ * Produktlisten und Zeitstempel-Verwaltung für den Bestellungsprozess.
+ *
+ * <p>Attribute:
+ * <ul>
+ *   <li>Session session – aktuelle Benutzersitzung</li>
+ *   <li>Bestellung bestellung – die anzuzeigende/bearbeitende Bestellung</li>
+ *   <li>JLabel erfassungLabel – Anzeige des Erfassungszeitpunkts</li>
+ *   <li>JLabel versandLabel – Anzeige des Versandzeitpunkts</li>
+ *   <li>JLabel lieferungLabel – Anzeige des Lieferzeitpunkts</li>
+ *   <li>JLabel bezahlungLabel – Anzeige des Bezahlzeitpunkts</li>
+ *   <li>boolean hasChanges – Flag für ungespeicherte Änderungen</li>
+ *   <li>JTable table – Tabelle der Bestellungsprodukte</li>
+ *   <li>BestellungTableModel tableModel – Datenmodell für die Tabelle</li>
+ * </ul>
+ *
+ * <p>Wesentliche Methoden:
+ * <ul>
+ *   <li>BestellungDetailDialog(Frame, Session, Bestellung) – Konstruktor mit UI-Initialisierung</li>
+ *   <li>initializeUI() – Erstellt die komplette Benutzeroberfläche</li>
+ *   <li>setTimestamp(String) – Setzt Zeitstempel für Bestellungsphasen</li>
+ *   <li>areAllTimestampsSet() – Prüft Vollständigkeit der Zeitstempel</li>
+ *   <li>saveAndClose() – Speichert Änderungen und schließt Dialog</li>
+ * </ul>
+ *
+ * @author Bjarne von Appen
+ */
 public class BestellungDetailDialog extends JDialog {
     private static final long serialVersionUID = 5L;
+    
+    /** Aktuelle Benutzersitzung */
     private final Session session;
+    /** Die anzuzeigende/bearbeitende Bestellung */
     private final Bestellung bestellung;
+    /** Anzeige des Erfassungszeitpunkts */
     private JLabel erfassungLabel;
+    /** Anzeige des Versandzeitpunkts */
     private JLabel versandLabel;
+    /** Anzeige des Lieferzeitpunkts */
     private JLabel lieferungLabel;
+    /** Anzeige des Bezahlzeitpunkts */
     private JLabel bezahlungLabel;
+    /** Flag für ungespeicherte Änderungen */
     private boolean hasChanges = false;
+    /** Tabelle der Bestellungsprodukte */
     private JTable table;
+    /** Datenmodell für die Produkttabelle */
     private BestellungTableModel tableModel;
 
+    /**
+     * Konstruktor erstellt den Dialog für Bestellungsdetails.
+     *
+     * @param parent     übergeordnetes Fenster
+     * @param session    aktuelle Benutzersitzung
+     * @param bestellung die anzuzeigende Bestellung
+     */
     public BestellungDetailDialog(Frame parent, Session session, Bestellung bestellung) {
         super(parent, "Bestellungsdetails", true);
         this.session = session;
@@ -37,9 +85,15 @@ public class BestellungDetailDialog extends JDialog {
         initializeUI();
     }
 
+    /**
+     * Initialisiert die komplette Benutzeroberfläche des Dialogs.
+     *
+     * @author Bjarne von Appen
+     */
     private void initializeUI() {
         SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
+        // Eingabebereich mit Bestellungsinformationen
         JPanel inputPanel = new JPanel(new GridLayout(9, 2, 5, 5));
         inputPanel.add(new JLabel("Bestell-ID:"));
         JTextField idField = new JTextField(String.valueOf(bestellung.getId()));
@@ -67,6 +121,7 @@ public class BestellungDetailDialog extends JDialog {
         datumField.setEditable(false);
         inputPanel.add(datumField);
 
+        // Zeitstempel-Labels für Bestellungsphasen
         inputPanel.add(new JLabel("Erfassung:"));
         erfassungLabel = new JLabel(bestellung.getErfassung() != null ? sdf.format(bestellung.getErfassung()) : "Nicht gesetzt");
         inputPanel.add(erfassungLabel);
@@ -85,6 +140,7 @@ public class BestellungDetailDialog extends JDialog {
 
         add(inputPanel, BorderLayout.NORTH);
 
+        // Produkttabelle mit Währungsformatierung
         tableModel = new BestellungTableModel(List.of(bestellung));
         table = new JTable(tableModel);
         table.setRowHeight(25);
@@ -108,6 +164,7 @@ public class BestellungDetailDialog extends JDialog {
         JScrollPane scrollPane = new JScrollPane(table);
         add(scrollPane, BorderLayout.CENTER);
 
+        // Button-Panel mit Gesamtpreis und Aktionen
         JPanel buttonPanel = new JPanel(new BorderLayout());
         List<BestellungProdukt> produkte = bestellung.getProdukte();
         if (produkte == null) {
@@ -120,6 +177,7 @@ public class BestellungDetailDialog extends JDialog {
         gesamtpreisLabel.setFont(new Font("Arial", Font.BOLD, 14));
         buttonPanel.add(gesamtpreisLabel, BorderLayout.NORTH);
 
+        // Zeitstempel-Buttons für Bestellungsphasen
         JPanel timestampPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton erfassungButton = new JButton("Erfassung setzen");
         erfassungButton.addActionListener(e -> setTimestamp("erfassung"));
@@ -139,6 +197,7 @@ public class BestellungDetailDialog extends JDialog {
 
         buttonPanel.add(timestampPanel, BorderLayout.CENTER);
 
+        // Speichern/Schließen-Buttons
         JPanel closePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton saveButton = new JButton("Speichern");
         saveButton.addActionListener(e -> saveAndClose());
@@ -164,6 +223,12 @@ public class BestellungDetailDialog extends JDialog {
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
+    /**
+     * Prüft, ob alle Zeitstempel der Bestellung gesetzt sind.
+     *
+     * @return true wenn alle Zeitstempel vorhanden sind, false sonst
+     * @author Bjarne von Appen
+     */
     private boolean areAllTimestampsSet() {
         return bestellung.getErfassung() != null &&
                bestellung.getVersand() != null &&
@@ -171,6 +236,12 @@ public class BestellungDetailDialog extends JDialog {
                bestellung.getBezahlung() != null;
     }
 
+    /**
+     * Setzt einen Zeitstempel für eine bestimmte Bestellungsphase.
+     *
+     * @param type Art des Zeitstempels ("erfassung", "versand", "lieferung", "bezahlung")
+     * @author Bjarne von Appen
+     */
     private void setTimestamp(String type) {
         try {
             if (areAllTimestampsSet()) {
@@ -219,12 +290,18 @@ public class BestellungDetailDialog extends JDialog {
         }
     }
 
+    /**
+     * Speichert alle Änderungen und schließt den Dialog.
+     *
+     * @author Bjarne von Appen
+     */
     private void saveAndClose() {
         try {
             if (hasChanges) {
                 boolean success = session.getCommunicator().updateBestellung(bestellung);
                 if (success) {
                     JOptionPane.showMessageDialog(this, "Änderungen erfolgreich gespeichert!", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                    // Aktualisiere die übergeordnete Bestellungsseite
                     if (getOwner() instanceof LagerUI) {
                         LagerUI lagerUI = (LagerUI) getOwner();
                         Component currentPanel = lagerUI.getContentPane().getComponent(0);
