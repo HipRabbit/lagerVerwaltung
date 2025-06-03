@@ -20,7 +20,7 @@ public class DeleteLager extends JDialog {
      * Ein Dialogfenster zum Löschen eines Lagers aus der Lagerverwaltung.
      * Ermöglicht die Auswahl eines Lagers und dessen Löschung nach Bestätigung.
      *
-     * @author [Lennart Höpfner]
+     * @author Lennart Höpfner
      * @version 1.0
      * @since 2025-06-01
      */

@@ -18,7 +18,7 @@ import thw.edu.javaII.port.warehouse.ui.common.Session;
  * Ermöglicht die Eingabe von Name, Hersteller, Preis, Anzahl und die Auswahl eines Lagerplatzes.
  * Die Eingaben werden über den Communicator an den Server gesendet.
  *
- * @author [Lennart Höpfner]
+ * @author Lennart Höpfner
  * @version 1.0
  * @since 2025-06-01
  */

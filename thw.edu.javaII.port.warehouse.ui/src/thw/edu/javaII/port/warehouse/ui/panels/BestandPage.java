@@ -17,7 +17,7 @@ import thw.edu.javaII.port.warehouse.ui.model.BestandTableModel;
  * Enthält eine Tabelle mit Lagerbestandsdaten, Sortieroptionen, Bearbeitungs- und Aktualisierungsfunktionen.
  * Zeigt den Gesamtwert des Bestands an.
  *
- * @author [Lennart Höpfner]
+ * @author Lennart Höpfner
  * @version 1.0
  * @since 2025-06-01
  */

@@ -28,7 +28,7 @@ import java.util.List;
  *   <li>Berechnung des Gesamtwerts der Bestellung</li>
  * </ul>
  *
- * @author Paul
+ * @author Bjarne von Appen
  */
 public class Bestellung implements Serializable {
     private static final long serialVersionUID = 1L;

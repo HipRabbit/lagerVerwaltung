@@ -17,7 +17,7 @@ import thw.edu.javaII.port.warehouse.ui.common.Session;
  * Ermöglicht die Änderung von Name, Kapazität und zugehörigem Lager.
  * Die Änderungen werden über den Communicator an den Server gesendet.
  *
- * @author [Lennart Höpfner]
+ * @author Lennart Höpfner
  * @version 1.0
  * @since 2025-06-01
  */

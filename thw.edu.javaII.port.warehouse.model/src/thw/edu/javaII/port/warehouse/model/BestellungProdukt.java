@@ -17,7 +17,7 @@ import java.io.Serializable;
  *   <li>Getter- und Setter-Methoden für produkt und anzahl</li>
  * </ul>
  *
- * @author Paul
+ * @author Bjarne von Appen
  */
 public class BestellungProdukt implements Serializable {
     private static final long serialVersionUID = 1L; // Versions-ID für Serializable

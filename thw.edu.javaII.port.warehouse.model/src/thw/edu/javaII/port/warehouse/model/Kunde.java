@@ -102,7 +102,6 @@ public class Kunde implements Serializable {
      * Gibt eine formatierte Listen-Zeile mit allen Kundenfeldern zurück.
      *
      * @return formatierte String-Repräsentation (alle Spalten)
-     * @author Bjarne von Appen
      */
     public String toListString() {
         return String.format(PRINT_FORMAT,
@@ -113,7 +112,6 @@ public class Kunde implements Serializable {
      * Liefert eine Kurzform "Vorname Nachname", z. B. für JComboBox.
      *
      * @return voller Name des Kunden
-     * @author Bjarne von Appen
      */
     @Override
     public String toString() {
@@ -125,7 +123,6 @@ public class Kunde implements Serializable {
      *
      * @param column Index der Spalte (0=id, 1=Vorname, …, 4=Rechnungsadresse)
      * @return Objektwert für die Zelle oder null bei ungültigem Index
-     * @author Bjarne von Appen
      */
     public Object getValueAtColumn(int column) {
         switch (column) {

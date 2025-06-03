@@ -30,7 +30,34 @@ public class Database implements IStorage {
     private static final String dbUrl = "jdbc:sqlite:warehouse.sqlite";
     private Initializer init;
     private Logger logger;
-
+    /**
+     * Zentrale Datenbankklasse für das Lagerverwaltungssystem auf Basis von SQLite.
+     *
+     * <p>Diese Klasse implementiert das IStorage-Interface und bietet alle Methoden
+     * zur Verwaltung der persistierten Geschäftsobjekte (Lager, LagerPlatz, Produkt,
+     * Kunde, Bestellung, Nachbestellung etc.). Sie übernimmt die Initialisierung
+     * der Datenbanktabellen, das Einfügen von Testdaten, das Handling von IDs,
+     * Transaktionsmanagement und Fehlerprotokollierung.
+     *
+     * <p>Attribute:
+     * <ul>
+     *   <li>driverClass – JDBC-Treiber für SQLite</li>
+     *   <li>dbUrl – JDBC-URL für die Datenbank</li>
+     *   <li>Initializer init – Initialisiert Testdaten</li>
+     *   <li>Logger logger – Protokolliert Datenbankoperationen</li>
+     * </ul>
+     *
+     * <p>Wesentliche Methoden:
+     * <ul>
+     *   <li>initLager(List) – Initialisiert LAGER-Tabelle mit Testdaten</li>
+     *   <li>addProduktWithBestand(Produkt, LagerBestand) – Fügt Produkt und Bestand transaktional hinzu</li>
+     *   <li>Database() – Konstruktor mit Treiberinitialisierung</li>
+     * </ul>
+     *
+     * @author Bjarne von Appen
+     * @author Paul Hartmann
+     * @author Lennart Höpfner
+     */
     public Database() throws Exception {
         try {
             Class.forName(driverClass);
@@ -40,7 +67,11 @@ public class Database implements IStorage {
             throw new Exception(e);
         }
     }
-
+    /**
+     * Konstruktor initialisiert SQLite-Treiber und Logger.
+     *
+     * @throws Exception wenn der SQLite-Treiber nicht gefunden wird
+     */
     @Override
     public void initLager(List<Lager> list) {
         Connection con = null;
@@ -84,6 +115,22 @@ public class Database implements IStorage {
             }
         }
     }
+    /**
+     * Initialisiert die LAGER-Tabelle mit Testdaten, falls sie nicht existiert oder leer ist.
+     *
+     * @param list Liste der Lager (wird ignoriert, da Testdaten verwendet werden)
+     */
+    /**
+     * Fügt ein Produkt und den zugehörigen Lagerbestand in einer Transaktion hinzu.
+     *
+     * <p>Diese Methode stellt sicher, dass sowohl das Produkt als auch der
+     * Lagerbestand erfolgreich gespeichert werden oder im Fehlerfall beide
+     * Operationen rückgängig gemacht werden (Atomarität).
+     *
+     * @param produkt      das hinzuzufügende Produkt
+     * @param lagerBestand der zugehörige Lagerbestand
+     * @return true bei Erfolg, false bei Fehler
+     */
     //Neu
     public synchronized boolean addProduktWithBestand(Produkt produkt, LagerBestand lagerBestand) {
         Connection con = null;
@@ -134,6 +181,11 @@ public class Database implements IStorage {
             }
         }
     }
+    /**
+     * Fügt ein neues Lager hinzu. Die ID wird automatisch vergeben, falls nicht gesetzt.
+     *
+     * @param model das hinzuzufügende Lager
+     */
     @Override
     public synchronized void addLager(Lager model) {
         Connection con = null;
@@ -164,6 +216,11 @@ public class Database implements IStorage {
             }
         }
     }
+    /**
+     * Ermittelt die nächste verfügbare Lager-ID.
+     *
+     * @return nächste ID oder -1 bei Fehler
+     */
     public synchronized int getNextLagerId() {
         Connection con = null;
         PreparedStatement ps = null;
@@ -192,7 +249,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Aktualisiert ein bestehendes Lager.
+     *
+     * @param model das zu aktualisierende Lager
+     */
     @Override
     public void updateLager(Lager model) {
         Connection con = null;
@@ -223,7 +284,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Löscht ein Lager aus der Datenbank.
+     *
+     * @param model das zu löschende Lager
+     */
     @Override
     public void deleteLager(Lager model) {
         Connection con = null;
@@ -253,7 +318,12 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Lädt alle Lager aus der Datenbank.
+     *
+     * @return Liste aller Lager
+     */
+   
     @Override
     public List<Lager> getLagers() {
         List<Lager> l = new ArrayList<Lager>();
@@ -301,7 +371,11 @@ public class Database implements IStorage {
         }
         return l;
     }
-
+    /**
+     * Lädt alle Lager aus der Datenbank.
+     *
+     * @return Liste aller Lager
+     */
     public Lager getLagerById(int id) throws SQLException {
         Lager model = null;
         Connection con = null;
@@ -331,6 +405,11 @@ public class Database implements IStorage {
         }
         return model; // Rückgabe null, wenn kein Datensatz gefunden wurde
     }
+    /**
+     * Initialisiert die LAGERPLATZ-Tabelle mit Testdaten.
+     *
+     * @param list Liste der Lagerplätze (wird ignoriert, da Testdaten verwendet werden)
+     */
     @Override
     public void initLagerPlatz(List<LagerPlatz> list) {
         Connection con = null;
@@ -372,7 +451,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Ermittelt die nächste verfügbare LagerPlatz-ID.
+     *
+     * @return nächste ID oder -1 bei Fehler
+     */
     public synchronized int getNextLagerPlatzId() {
         Connection con = null;
         PreparedStatement ps = null;
@@ -401,7 +484,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Fügt einen neuen Lagerplatz hinzu. Die ID wird automatisch vergeben, falls nicht gesetzt.
+     *
+     * @param model der hinzuzufügende Lagerplatz
+     */
     public synchronized void addLagerPlatz(LagerPlatz model) {
         Connection con = null;
         PreparedStatement ps = null;
@@ -429,7 +516,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Aktualisiert einen bestehenden Lagerplatz.
+     *
+     * @param model der zu aktualisierende Lagerplatz
+     */
     @Override
     public void updateLagerPlatz(LagerPlatz model) {
         Connection con = null;
@@ -460,7 +551,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Löscht einen Lagerplatz aus der Datenbank.
+     *
+     * @param model der zu löschende Lagerplatz
+     */
     @Override
     public void deleteLagerPlatz(LagerPlatz model) {
         Connection con = null;
@@ -490,7 +585,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Lädt alle Lagerplätze aus der Datenbank.
+     *
+     * @return Liste aller LagerPlatz-Objekte mit zugehörigem Lager
+     */
     @Override
     public List<LagerPlatz> getLagerPlatzs() {
         List<LagerPlatz> l = new ArrayList<>();
@@ -538,7 +637,12 @@ public class Database implements IStorage {
         }
         return l;
     }
-
+    /**
+     * Sucht einen LagerPlatz anhand der ID.
+     *
+     * @param id LagerPlatz-ID
+     * @return LagerPlatz-Objekt oder null
+     */
     public LagerPlatz getLagerPlatzById(int id) {
         LagerPlatz model = null;
         Connection con = null;
@@ -572,6 +676,11 @@ public class Database implements IStorage {
         }
         return model;
     }
+    /**
+     * Initialisiert die LAGERBESTAND-Tabelle mit Testdaten.
+     *
+     * @param list Liste der LagerBestand-Objekte (wird ignoriert, Testdaten werden verwendet)
+     */
     @Override
     public void initLagerBestand(List<LagerBestand> list) {
         Connection con = null;
@@ -613,7 +722,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Fügt einen neuen LagerBestand hinzu und übernimmt die generierte ID.
+     *
+     * @param model LagerBestand-Objekt
+     */
     @Override
     public void addLagerBestand(LagerBestand model) {
         Connection con = null;
@@ -645,6 +758,11 @@ public class Database implements IStorage {
             if (con != null) try { con.close(); } catch (SQLException e) { e.printStackTrace(); }
         }
     }
+    /**
+     * Aktualisiert einen bestehenden LagerBestand.
+     *
+     * @param model LagerBestand-Objekt mit aktualisierten Daten
+     */
     @Override
     public void updateLagerBestand(LagerBestand model) {
         Connection con = null;
@@ -676,7 +794,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Löscht einen LagerBestand aus der Datenbank.
+     *
+     * @param model LagerBestand-Objekt
+     */
     @Override
     public void deleteLagerBestand(LagerBestand model) {
         Connection con = null;
@@ -706,7 +828,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Lädt alle Lagerbestände aus der Datenbank.
+     *
+     * @return Liste aller LagerBestand-Objekte mit verknüpften Lagerplatz- und Produktdaten
+     */
     @Override
     public List<LagerBestand> getLagerBestands() {
         List<LagerBestand> l = new ArrayList<>();
@@ -778,7 +904,11 @@ public class Database implements IStorage {
         }
         return l;
     }
-
+    /**
+     * Initialisiert die PRODUKT-Tabelle mit Testdaten.
+     *
+     * @param list Liste der Produkte (wird ignoriert, da Testdaten verwendet werden)
+     */
     @Override
     public void initProdukt(List<Produkt> list) {
         Connection con = null;
@@ -820,6 +950,11 @@ public class Database implements IStorage {
             }
         }
     }
+    /**
+     * Fügt ein neues Produkt hinzu. Die ID wird automatisch vergeben, falls nicht gesetzt.
+     *
+     * @param model das hinzuzufügende Produkt
+     */
     @Override
     public synchronized void addProdukt(Produkt model) {
         Connection con = null;
@@ -850,6 +985,11 @@ public class Database implements IStorage {
             }
         }
     }
+    /**
+     * Ermittelt die nächste verfügbare Produkt-ID.
+     *
+     * @return nächste ID oder -1 bei Fehler
+     */
     public synchronized int getNextProduktId() {
         Connection con = null;
         PreparedStatement ps = null;
@@ -878,6 +1018,12 @@ public class Database implements IStorage {
             }
         }
     }
+    /**
+     * Lädt ein Produkt anhand des Modells.
+     *
+     * @param mod das Produkt-Modell mit der gesuchten ID
+     * @return das gefundene Produkt
+     */
     @Override
     public Produkt getProduktByModel(Produkt mod) {
         Produkt model = new Produkt();
@@ -926,7 +1072,12 @@ public class Database implements IStorage {
         }
         return model;
     }
-
+    /**
+     * Sucht ein Produkt anhand der ID.
+     *
+     * @param id die Produkt-ID
+     * @return das gefundene Produkt oder null
+     */
     public Produkt getProduktById(int id) {
         Produkt model = null;
         Connection con = null;
@@ -963,6 +1114,11 @@ public class Database implements IStorage {
         }
         return model;
     }
+    /**
+     * Aktualisiert ein bestehendes Produkt.
+     *
+     * @param model das zu aktualisierende Produkt
+     */
     @Override
     public void updateProdukt(Produkt model) {
         Connection con = null;
@@ -993,7 +1149,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Aktualisiert ein bestehendes Produkt.
+     *
+     * @param model das zu aktualisierende Produkt
+     */
     @Override
     public void deleteProdukt(Produkt model) {
         Connection con = null;
@@ -1023,7 +1183,11 @@ public class Database implements IStorage {
             }
         }
     }
-
+    /**
+     * Löscht ein Produkt aus der Datenbank.
+     *
+     * @param model das zu löschende Produkt
+     */
     @Override
     public List<Produkt> getProdukts() {
         List<Produkt> l = new ArrayList<>();

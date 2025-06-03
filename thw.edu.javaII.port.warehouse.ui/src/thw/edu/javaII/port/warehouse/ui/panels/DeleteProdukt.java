@@ -19,7 +19,7 @@ import thw.edu.javaII.port.warehouse.ui.common.Session;
  * Ein Dialogfenster zum Löschen eines Produkts aus der Lagerverwaltung.
  * Prüft Abhängigkeiten (Bestellungen, Lagerbestände) und löscht das Produkt sowie zugehörige Lagerbestände.
  *
- * @author [Lennart Höpfner]
+ * @author Lennart Höpfner
  * @version 1.0
  * @since 2025-06-01
  */
