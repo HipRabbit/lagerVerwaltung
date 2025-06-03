@@ -1,0 +1,207 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import java.awt.*;
+import javax.swing.*;
+import java.io.IOException;
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.model.common.Cast;
+import java.util.Comparator;
+import java.util.Collections;
+
+public class NachbestellungPage extends JPanel {
+    private static final long serialVersionUID = 10391231L;
+    private Session ses;
+    private JTable table;
+    private NachbestellungTableModel tableModel;
+    private JButton bestellenButton; // Button als Klassenvariable, um darauf zugreifen zu können
+    private boolean isProcessing = false; // Flag, um mehrfache Ausführung zu verhindern
+
+    public NachbestellungPage(Session ses) {
+        this.ses = ses;
+        setLayout(new BorderLayout());
+        initializeUI();
+    }
+
+    private void initializeUI() {
+        // Oberes Panel für Titel und Sortierbuttons
+        JPanel topPanel = new JPanel(new BorderLayout());
+
+        // Titel
+        JLabel lblTitle = new JLabel("Nachbestellungübersicht");
+        lblTitle.setFont(new Font("Arial", Font.BOLD, 16));
+        topPanel.add(lblTitle, BorderLayout.NORTH);
+
+        // Sortierbuttons (links oberhalb der Tabelle)
+        JPanel sortPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JToggleButton sortByIdButton = new JToggleButton("Sortieren nach Produkt-ID");
+        JToggleButton sortByNameButton = new JToggleButton("Sortieren nach Produkt-Name");
+
+        sortByIdButton.addActionListener(e -> {
+            boolean ascending = !sortByIdButton.isSelected();
+            tableModel.sortById(ascending);
+            sortByIdButton.setText(ascending ? "Sortieren nach Produkt-ID ↑" : "Sortieren nach Produkt-ID ↓");
+            sortByNameButton.setSelected(false);
+            sortByNameButton.setText("Sortieren nach Produkt-Name");
+            updateSortIndicator(0, ascending); // Spalte 0 (Produkt-ID)
+        });
+
+        sortByNameButton.addActionListener(e -> {
+            boolean ascending = !sortByNameButton.isSelected();
+            tableModel.sortByName(ascending);
+            sortByNameButton.setText(ascending ? "Sortieren nach Produkt-Name ↑" : "Sortieren nach Produkt-Name ↓");
+            sortByIdButton.setSelected(false);
+            sortByIdButton.setText("Sortieren nach Produkt-ID");
+            updateSortIndicator(1, ascending); // Spalte 1 (Produkt-Name)
+        });
+
+        sortPanel.add(sortByIdButton);
+        sortPanel.add(sortByNameButton);
+        topPanel.add(sortPanel, BorderLayout.CENTER);
+
+        add(topPanel, BorderLayout.NORTH);
+
+        // Button-Panel mit einem einzigen Button
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        bestellenButton = new JButton("Nachbestellen");
+
+        bestellenButton.addActionListener(e -> {
+            if (isProcessing) {
+                return;
+            }
+            isProcessing = true;
+            bestellenButton.setEnabled(false);
+
+            try {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow >= 0) {
+                    Nachbestellung selectedNachbestellung = tableModel.getNachbestellungAt(selectedRow);
+
+                    AnzahlNachbestellung dialog = new AnzahlNachbestellung(ses, (JFrame) SwingUtilities.getWindowAncestor(this));
+                    dialog.setSelectedNachbestellung(selectedNachbestellung);
+                    dialog.setVisible(true);
+
+                    int nachbestellMenge = selectedNachbestellung.getAnzahlnachbestellung();
+                    if (nachbestellMenge <= 0) {
+                        JOptionPane.showMessageDialog(this, "Nachbestellmenge muss größer als 0 sein.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    refresh(); // Hier wird die Tabelle aktualisiert
+                    JOptionPane.showMessageDialog(this, "Nachbestellung verarbeitet. Bestand wurde aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Nachbestellung aus.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                }
+            } finally {
+                isProcessing = false;
+                bestellenButton.setEnabled(true);
+            }
+        });
+
+        buttonPanel.add(bestellenButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        tableModel = new NachbestellungTableModel();
+        table = new JTable(tableModel);
+        table.setFillsViewportHeight(true);
+        table.setRowHeight(25);
+
+        // Setze benutzerdefinierten Header-Renderer für Sortierungsanzeige
+        table.getTableHeader().setDefaultRenderer(new SortIndicatorHeaderRenderer(table.getTableHeader().getDefaultRenderer()));
+
+        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        refresh();
+    }
+
+    private void updateSortIndicator(int columnIndex, boolean ascending) {
+        SortIndicatorHeaderRenderer renderer = (SortIndicatorHeaderRenderer) table.getTableHeader().getDefaultRenderer();
+        renderer.setSortColumn(columnIndex, ascending);
+        table.getTableHeader().repaint();
+    }
+
+    public void refresh() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.NACHBESTELLUNG);
+            deo.setCommand(Command.LIST);
+            WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                java.util.List<Nachbestellung> NachbestellungList = Cast.safeListCast(ret.getData(), Nachbestellung.class);
+                tableModel.setData(NachbestellungList);
+            } else {
+                JOptionPane.showMessageDialog(this, "Fehler beim Abrufen der Nachbestellung: " + ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                tableModel.setData(new java.util.ArrayList<>());
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Kommunikationsfehler: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            tableModel.setData(new java.util.ArrayList<>());
+        }
+    }
+}
+
+class NachbestellungTableModel extends javax.swing.table.AbstractTableModel {
+    private static final long serialVersionUID = -5706053428116906813L;
+    private java.util.List<Nachbestellung> data = new java.util.ArrayList<>();
+    // Ändere Spaltennamen und entferne "Zukünftiger Bestand"
+    private String[] columnNames = {"Produkt-ID", "Produkt-Name", "Akt Bestand", "Hersteller", "Anzahl Nachbestellung"};
+
+    public void setData(java.util.List<Nachbestellung> data) {
+        this.data = data != null ? data : new java.util.ArrayList<>();
+        fireTableDataChanged();
+    }
+
+    public Nachbestellung getNachbestellungAt(int row) {
+        return data.get(row);
+    }
+
+    public void sortById(boolean ascending) {
+        Comparator<Nachbestellung> comparator = Comparator.comparingInt(Nachbestellung::getPid);
+        if (!ascending) {
+            comparator = comparator.reversed();
+        }
+        Collections.sort(data, comparator);
+        fireTableDataChanged();
+    }
+
+    public void sortByName(boolean ascending) {
+        Comparator<Nachbestellung> comparator = Comparator.comparing(Nachbestellung::getPname);
+        if (!ascending) {
+            comparator = comparator.reversed();
+        }
+        Collections.sort(data, comparator);
+        fireTableDataChanged();
+    }
+
+    @Override
+    public int getRowCount() {
+        return data.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return columnNames.length; // Jetzt 5 statt 6 Spalten
+    }
+
+    @Override
+    public Object getValueAt(int row, int col) {
+        Nachbestellung nachbestellung = data.get(row);
+        switch (col) {
+            case 0: return nachbestellung.getPid();
+            case 1: return nachbestellung.getPname();
+            case 2: return nachbestellung.getAktuellerbestand();
+            case 3: return nachbestellung.getPhersteller();
+            case 4: return nachbestellung.getAnzahlnachbestellung();
+            default: return null;
+        }
+    }
+
+    @Override
+    public String getColumnName(int col) {
+        return columnNames[col];
+    }
+}

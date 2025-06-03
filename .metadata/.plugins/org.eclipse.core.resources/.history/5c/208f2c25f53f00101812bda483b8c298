@@ -1,0 +1,235 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import java.awt.*;
+import javax.swing.*;
+import java.io.IOException;
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.model.deo.Status;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.model.common.Cast;
+import java.util.Comparator;
+import java.util.Collections;
+
+public class NachbestellungPage extends JPanel {
+    private static final long serialVersionUID = 10391231L;
+    private Session ses;
+    private JTable table;
+    private NachbestellungTableModel tableModel;
+    private JButton bestellenButton;
+    private boolean isProcessing = false;
+
+    public NachbestellungPage(Session ses) {
+        this.ses = ses;
+        setLayout(new BorderLayout());
+        initializeUI();
+    }
+
+    private void initializeUI() {
+        JPanel topPanel = new JPanel(new BorderLayout());
+
+        JLabel lblTitle = new JLabel("Nachbestellungübersicht");
+        lblTitle.setFont(new Font("Arial", Font.BOLD, 16));
+        topPanel.add(lblTitle, BorderLayout.NORTH);
+
+        JPanel sortPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JToggleButton sortByIdButton = new JToggleButton("Sortieren nach ID");
+        JToggleButton sortByNameButton = new JToggleButton("Sortieren nach Name");
+
+        sortByIdButton.addActionListener(e -> {
+            boolean ascending = !sortByIdButton.isSelected();
+            tableModel.sortById(ascending);
+            sortByIdButton.setText(ascending ? "Sortieren nach ID ↑" : "Sortieren nach ID ↓");
+            sortByNameButton.setSelected(false);
+            sortByNameButton.setText("Sortieren nach Name");
+            updateSortIndicator(0, ascending);
+        });
+
+        sortByNameButton.addActionListener(e -> {
+            boolean ascending = !sortByNameButton.isSelected();
+            tableModel.sortByName(ascending);
+            sortByNameButton.setText(ascending ? "Sortieren nach Name ↑" : "Sortieren nach Name ↓");
+            sortByIdButton.setSelected(false);
+            sortByIdButton.setText("Sortieren nach ID");
+            updateSortIndicator(1, ascending);
+        });
+
+        sortPanel.add(sortByIdButton);
+        sortPanel.add(sortByNameButton);
+        topPanel.add(sortPanel, BorderLayout.CENTER);
+
+        add(topPanel, BorderLayout.NORTH);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        bestellenButton = new JButton("Nachbestellen");
+
+        bestellenButton.addActionListener(e -> {
+            if (isProcessing) {
+                return;
+            }
+            isProcessing = true;
+            bestellenButton.setEnabled(false);
+
+            try {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow >= 0) {
+                    Nachbestellung selectedNachbestellung = tableModel.getNachbestellungAt(selectedRow);
+
+                    // Öffne Dialog zur Eingabe der Nachbestellmenge
+                    AnzahlNachbestellung dialog = new AnzahlNachbestellung(ses, (JFrame) SwingUtilities.getWindowAncestor(this));
+                    dialog.setSelectedNachbestellung(selectedNachbestellung);
+                    dialog.setVisible(true);
+
+                    // Prüfe, ob eine gültige Menge eingegeben wurde
+                    int nachbestellMenge = selectedNachbestellung.getAnzahlnachbestellung();
+                    if (nachbestellMenge <= 0) {
+                        JOptionPane.showMessageDialog(this, "Nachbestellmenge muss größer als 0 sein.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    // Aktualisiere LagerBestand
+                    LagerBestand lagerBestand = ses.getCommunicator().getLagerBestandByProdukt(selectedNachbestellung.getPid());
+                    if (lagerBestand == null) {
+                        JOptionPane.showMessageDialog(this, "Kein Lagerbestand für Produkt-ID " + selectedNachbestellung.getPid() + " gefunden.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    int neueMenge = lagerBestand.getAnzahl() + nachbestellMenge;
+                    lagerBestand.setAnzahl(neueMenge);
+                    WarehouseReturnDEO ret = ses.getCommunicator().updateLagerBestand(lagerBestand);
+                    if (ret.getStatus() != Status.OK) {
+                        JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Lagerbestands: " + ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    // Lösche Nachbestellung nach Verarbeitung
+                    WarehouseDEO deo = new WarehouseDEO();
+                    deo.setZone(Zone.NACHBESTELLUNG);
+                    deo.setCommand(Command.DELETE);
+                    deo.setData(selectedNachbestellung);
+                    ret = ses.getCommunicator().sendRequest(deo);
+                    if (ret.getStatus() != Status.OK) {
+                        JOptionPane.showMessageDialog(this, "Fehler beim Löschen der Nachbestellung: " + ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    // Aktualisiere die Tabelle
+                    refresh();
+                    JOptionPane.showMessageDialog(this, "Nachbestellung verarbeitet. Bestand wurde aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Nachbestellung aus.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Fehler beim Verarbeiten der Nachbestellung: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            } finally {
+                isProcessing = false;
+                bestellenButton.setEnabled(true);
+            }
+        });
+
+        buttonPanel.add(bestellenButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        tableModel = new NachbestellungTableModel();
+        table = new JTable(tableModel);
+        table.setFillsViewportHeight(true);
+        table.setRowHeight(25);
+
+        table.getTableHeader().setDefaultRenderer(new SortIndicatorHeaderRenderer(table.getTableHeader().getDefaultRenderer()));
+
+        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        refresh();
+    }
+
+    public void refresh() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.NACHBESTELLUNG);
+            deo.setCommand(Command.LIST);
+            WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == Status.OK) {
+                java.util.List<Nachbestellung> NachbestellungList = Cast.safeListCast(ret.getData(), Nachbestellung.class);
+                tableModel.setData(NachbestellungList);
+            } else {
+                JOptionPane.showMessageDialog(this, "Fehler beim Abrufen der Nachbestellung: " + ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                tableModel.setData(new java.util.ArrayList<>());
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Kommunikationsfehler: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            tableModel.setData(new java.util.ArrayList<>());
+        }
+    }
+
+    private void updateSortIndicator(int columnIndex, boolean ascending) {
+        SortIndicatorHeaderRenderer renderer = (SortIndicatorHeaderRenderer) table.getTableHeader().getDefaultRenderer();
+        renderer.setSortColumn(columnIndex, ascending);
+        table.getTableHeader().repaint();
+    }
+}
+
+class NachbestellungTableModel extends javax.swing.table.AbstractTableModel {
+    private static final long serialVersionUID = -5706053428116906813L;
+    private java.util.List<Nachbestellung> data = new java.util.ArrayList<>();
+    private String[] columnNames = {"P-ID", "P-Name", "Akt Bestand", "Hersteller", "Anzahl Nachbestellung", "Zukünftiger Bestand"};
+
+    public void setData(java.util.List<Nachbestellung> data) {
+        this.data = data != null ? data : new java.util.ArrayList<>();
+        fireTableDataChanged();
+    }
+
+    public Nachbestellung getNachbestellungAt(int row) {
+        return data.get(row);
+    }
+
+    public void sortById(boolean ascending) {
+        Comparator<Nachbestellung> comparator = Comparator.comparingInt(Nachbestellung::getPid);
+        if (!ascending) {
+            comparator = comparator.reversed();
+        }
+        Collections.sort(data, comparator);
+        fireTableDataChanged();
+    }
+
+    public void sortByName(boolean ascending) {
+        Comparator<Nachbestellung> comparator = Comparator.comparing(Nachbestellung::getPname);
+        if (!ascending) {
+            comparator = comparator.reversed();
+        }
+        Collections.sort(data, comparator);
+        fireTableDataChanged();
+    }
+
+    @Override
+    public int getRowCount() {
+        return data.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return columnNames.length;
+    }
+
+    @Override
+    public Object getValueAt(int row, int col) {
+        Nachbestellung nachbestellung = data.get(row);
+        switch (col) {
+            case 0: return nachbestellung.getPid();
+            case 1: return nachbestellung.getPname();
+            case 2: return nachbestellung.getAktuellerbestand();
+            case 3: return nachbestellung.getPhersteller();
+            case 4: return nachbestellung.getAnzahlnachbestellung();
+            case 5: return nachbestellung.getZukünftigerbestand();
+            default: return null;
+        }
+    }
+
+    @Override
+    public String getColumnName(int col) {
+        return columnNames[col];
+    }
+}

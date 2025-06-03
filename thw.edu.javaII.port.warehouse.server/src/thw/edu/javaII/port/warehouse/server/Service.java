@@ -23,6 +23,7 @@ import thw.edu.javaII.port.warehouse.model.LagerPlatz;
 import thw.edu.javaII.port.warehouse.model.Produkt;
 import thw.edu.javaII.port.warehouse.model.Kunde;
 import thw.edu.javaII.port.warehouse.model.Bestellung;
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
 import thw.edu.javaII.port.warehouse.model.FilterCriteria;
 import thw.edu.javaII.port.warehouse.server.comparator.BestandByLagerBestand;
 import thw.edu.javaII.port.warehouse.server.comparator.BestandByProduktAlpha;
@@ -82,10 +83,10 @@ public class Service extends Thread {
                     case GENERAL:
                         deoOut = handleZoneGeneral(deoIn, deoOut);
                         break; 
-                    case KUNDE://Neu
+                    case KUNDE:
                         deoOut = handleZoneKunde(deoIn, deoOut);
                         break;
-                    case BESTELLUNG: //Neu
+                    case BESTELLUNG:
                         deoOut = handleZoneBestellung(deoIn, deoOut);
                         break;
                     case NACHBESTELLUNG:
@@ -115,7 +116,7 @@ public class Service extends Thread {
         }
         logger.log(Level.INFO, "Protokoll für Client " + currentNumber + " beendet");
     }
-//Neu
+
     private WarehouseReturnDEO handleZoneKunde(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case ADD:
@@ -609,7 +610,7 @@ public class Service extends Thread {
         }
         return deoOut;
     }
-//Neu
+
     private WarehouseReturnDEO handleZoneBestellung(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case ADD:
@@ -688,12 +689,35 @@ public class Service extends Thread {
         }
         return deoOut;
     }
+
     private WarehouseReturnDEO handleZoneNachbestellung(WarehouseDEO deoIn, WarehouseReturnDEO deoOut) {
         switch (deoIn.getCommand()) {
             case LIST:
-                deoOut = new WarehouseReturnDEO(store.getNachbestellungen(), "Liste aller Nachbestellungen", Status.OK);
+                try {
+                    List<Nachbestellung> nachbestellungen = store.getNachbestellungen();
+                    // Für jede Nachbestellung die Kapazität des zugehörigen Lagerplatzes laden
+                    for (Nachbestellung n : nachbestellungen) {
+                        LagerBestand matchingBestand = store.getLagerBestandByProduktId(n.getPid());
+                        if (matchingBestand != null) {
+                            LagerPlatz lagerPlatz = matchingBestand.getLagerplatz_id();
+                            if (lagerPlatz != null) {
+                                n.setKapazitaet(lagerPlatz.getKapazitaet());
+                                logger.log(Level.INFO, "Kapazität für Produkt-ID " + n.getPid() + " gesetzt: " + lagerPlatz.getKapazitaet());
+                            } else {
+                                logger.log(Level.WARNING, "Kein Lagerplatz für LagerBestand von Produkt-ID " + n.getPid() + " gefunden");
+                                n.setKapazitaet(0); // Fallback-Wert
+                            }
+                        } else {
+                            logger.log(Level.WARNING, "Kein LagerBestand für Produkt-ID " + n.getPid() + " gefunden");
+                            n.setKapazitaet(0); // Fallback-Wert
+                        }
+                    }
+                    deoOut = new WarehouseReturnDEO(nachbestellungen, "Liste aller Nachbestellungen mit Kapazitäten", Status.OK);
+                } catch (RuntimeException e) {
+                    logger.log(Level.ERROR, "Fehler beim Abrufen der Nachbestellungen: " + e.getMessage());
+                    deoOut = new WarehouseReturnDEO(null, "Fehler beim Abrufen der Nachbestellungen: " + e.getMessage(), Status.ERROR);
+                }
                 break;
-
             case UPDATE:
                 if (deoIn.getData() != null && deoIn.getData() instanceof thw.edu.javaII.port.warehouse.model.Nachbestellung) {
                     thw.edu.javaII.port.warehouse.model.Nachbestellung n = Cast.safeCast(deoIn.getData(), thw.edu.javaII.port.warehouse.model.Nachbestellung.class);

@@ -19,7 +19,7 @@ public class AnzahlNachbestellung extends JDialog {
     private Nachbestellung selectedNachbestellung;
 
     public AnzahlNachbestellung(Session ses, JFrame parent) {
-        super(parent, "Anzahl bearbeiten", true);
+        super(parent, "Nachbestellen", true);
         this.ses = ses;
         initializeUI();
     }
@@ -40,7 +40,7 @@ public class AnzahlNachbestellung extends JDialog {
         txtAnzahl = new JTextField(10);
         add(txtAnzahl, "growx");
 
-        btnSave = new JButton("Speichern");
+        btnSave = new JButton("Abschicken");
         btnSave.addActionListener(e -> saveAnzahl());
 
         btnCancel = new JButton("Abbrechen");

@@ -1,0 +1,86 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import java.awt.*;
+import javax.swing.*;
+import net.miginfocom.swing.MigLayout;
+
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+
+public class AnzahlNachbestellung extends JDialog {
+    private static final long serialVersionUID = 15L;
+    private final Session ses;
+    private JTextField txtAnzahl;
+    private JButton btnSave, btnCancel;
+    private Nachbestellung selectedNachbestellung;
+
+    public AnzahlNachbestellung(Session ses, JFrame parent) {
+        super(parent, "Anzahl bearbeiten", true);
+        this.ses = ses;
+        initializeUI();
+    }
+
+    public void setSelectedNachbestellung(Nachbestellung nachbestellung) {
+        this.selectedNachbestellung = nachbestellung;
+        if (txtAnzahl != null && nachbestellung != null) {
+            txtAnzahl.setText(String.valueOf(nachbestellung.getAnzahlnachbestellung()));
+        }
+    }
+
+    private void initializeUI() {
+        setLayout(new MigLayout("wrap 2", "[right][grow]"));
+        setSize(300, 150);
+        setLocationRelativeTo(getParent());
+
+        add(new JLabel("Neue Anzahl:"));
+        txtAnzahl = new JTextField(10);
+        add(txtAnzahl, "growx");
+
+        btnSave = new JButton("Speichern");
+        btnSave.addActionListener(e -> saveAnzahl());
+
+        btnCancel = new JButton("Abbrechen");
+        btnCancel.addActionListener(e -> dispose());
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.add(btnSave);
+        buttonPanel.add(btnCancel);
+        add(buttonPanel, "span 2, center");
+    }
+
+    private void saveAnzahl() {
+        try {
+            if (selectedNachbestellung == null) {
+                JOptionPane.showMessageDialog(this, "Keine Nachbestellung ausgewählt.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            int neueAnzahl = Integer.parseInt(txtAnzahl.getText().trim());
+            if (neueAnzahl < 0) throw new NumberFormatException();
+
+            selectedNachbestellung.setAnzahlnachbestellung(neueAnzahl);
+
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.NACHBESTELLUNG);
+            deo.setCommand(Command.UPDATE);
+            deo.setData(selectedNachbestellung);
+
+            WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                JOptionPane.showMessageDialog(this, "Anzahl erfolgreich geändert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                dispose();
+            } else {
+                JOptionPane.showMessageDialog(this, ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Bitte geben Sie eine gültige ganze Zahl ein.", "Fehler", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Fehler: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+}

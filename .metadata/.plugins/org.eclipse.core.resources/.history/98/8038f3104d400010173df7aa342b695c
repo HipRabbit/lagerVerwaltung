@@ -1,0 +1,186 @@
+package thw.edu.javaII.port.warehouse.ui.panels;
+
+import java.awt.*;
+import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellRenderer;
+
+import java.io.IOException;
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseDEO;
+import thw.edu.javaII.port.warehouse.model.deo.WarehouseReturnDEO;
+import thw.edu.javaII.port.warehouse.model.deo.Zone;
+import thw.edu.javaII.port.warehouse.model.deo.Command;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.ui.model.NachbestellungTableModel;
+import thw.edu.javaII.port.warehouse.model.common.Cast;
+import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class NachbestellungPage extends JPanel {
+    private static final long serialVersionUID = 10391231L;
+    private Session ses;
+    private JTable table;
+    private NachbestellungTableModel tableModel;
+    private JButton bestellenButton; // Button als Klassenvariable, um darauf zugreifen zu können
+    private boolean isProcessing = false; // Flag, um mehrfache Ausführung zu verhindern
+
+    public NachbestellungPage(Session ses) {
+        this.ses = ses;
+        setLayout(new BorderLayout());
+        initializeUI();
+    }
+
+    private void initializeUI() {
+        // Oberes Panel für Titel und Sortierbuttons
+        JPanel topPanel = new JPanel(new BorderLayout());
+
+        // Titel
+        JLabel lblTitle = new JLabel("Nachbestellungübersicht");
+        lblTitle.setFont(new Font("Arial", Font.BOLD, 16));
+        topPanel.add(lblTitle, BorderLayout.NORTH);
+
+        // Sortierbuttons (links oberhalb der Tabelle)
+        JPanel sortPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JToggleButton sortByIdButton = new JToggleButton("Sortieren nach ID");
+        JToggleButton sortByNameButton = new JToggleButton("Sortieren nach Name");
+
+        sortByIdButton.addActionListener(e -> {
+            boolean ascending = !sortByIdButton.isSelected();
+            tableModel.sortById(ascending);
+            sortByIdButton.setText(ascending ? "Sortieren nach ID ↑" : "Sortieren nach ID ↓");
+            sortByNameButton.setSelected(false);
+            sortByNameButton.setText("Sortieren nach Name");
+            updateSortIndicator(0, ascending); // Spalte 0 (ID)
+        });
+
+        sortByNameButton.addActionListener(e -> {
+            boolean ascending = !sortByNameButton.isSelected();
+            tableModel.sortByName(ascending);
+            sortByNameButton.setText(ascending ? "Sortieren nach Name ↑" : "Sortieren nach Name ↓");
+            sortByIdButton.setSelected(false);
+            sortByIdButton.setText("Sortieren nach ID");
+            updateSortIndicator(1, ascending); // Spalte 1 (Name)
+        });
+
+        sortPanel.add(sortByIdButton);
+        sortPanel.add(sortByNameButton);
+        topPanel.add(sortPanel, BorderLayout.CENTER);
+
+        add(topPanel, BorderLayout.NORTH);
+
+        // Button-Panel mit einem einzigen Button
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        bestellenButton = new JButton("Nachbestellen"); // Button als Klassenvariable initialisieren
+
+        bestellenButton.addActionListener(e -> {
+            if (isProcessing) {
+                return;
+            }
+            isProcessing = true;
+            bestellenButton.setEnabled(false);
+
+            try {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow >= 0) {
+                    Nachbestellung selectedNachbestellung = tableModel.getNachbestellungAt(selectedRow);
+
+                    // Öffne Dialog zur Eingabe der Nachbestellmenge
+                    AnzahlNachbestellung dialog = new AnzahlNachbestellung(ses, (JFrame) SwingUtilities.getWindowAncestor(this));
+                    dialog.setSelectedNachbestellung(selectedNachbestellung);
+                    dialog.setVisible(true);
+
+                    // Prüfe, ob eine gültige Menge eingegeben wurde
+                    int nachbestellMenge = selectedNachbestellung.getAnzahlnachbestellung();
+                    if (nachbestellMenge <= 0) {
+                        JOptionPane.showMessageDialog(this, "Nachbestellmenge muss größer als 0 sein.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    // Aktualisiere die Tabelle (keine zweite UPDATE-Anfrage nötig)
+                    refresh();
+                    JOptionPane.showMessageDialog(this, "Nachbestellung verarbeitet. Bestand wurde aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Nachbestellung aus.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                }
+            } finally {
+                isProcessing = false;
+                bestellenButton.setEnabled(true);
+            }
+        });
+
+        buttonPanel.add(bestellenButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        tableModel = new NachbestellungTableModel(new ArrayList<>(), ses); // Session hinzufügen
+        table = new JTable(tableModel);
+        table.setFillsViewportHeight(true);
+        table.setRowHeight(25);
+
+        // Setze benutzerdefinierten Header-Renderer für Sortierungsanzeige
+        table.getTableHeader().setDefaultRenderer(new SortIndicatorHeaderRenderer(table.getTableHeader().getDefaultRenderer()));
+
+        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        refresh();
+    }
+
+    public void refresh() {
+        try {
+            WarehouseDEO deo = new WarehouseDEO();
+            deo.setZone(Zone.NACHBESTELLUNG);
+            deo.setCommand(Command.LIST);
+            WarehouseReturnDEO ret = ses.getCommunicator().sendRequest(deo);
+            if (ret.getStatus() == thw.edu.javaII.port.warehouse.model.deo.Status.OK) {
+                java.util.List<Nachbestellung> nachbestellungList = Cast.safeListCast(ret.getData(), Nachbestellung.class);
+                tableModel.setData(nachbestellungList);
+            } else {
+                JOptionPane.showMessageDialog(this, "Fehler beim Abrufen der Nachbestellung: " + ret.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                tableModel.setData(new java.util.ArrayList<>());
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Kommunikationsfehler: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            tableModel.setData(new java.util.ArrayList<>());
+        }
+    }
+
+    private void updateSortIndicator(int columnIndex, boolean ascending) {
+        SortIndicatorHeaderRenderer renderer = (SortIndicatorHeaderRenderer) table.getTableHeader().getDefaultRenderer();
+        renderer.setSortColumn(columnIndex, ascending);
+        table.getTableHeader().repaint();
+    }
+}
+
+@SuppressWarnings("serial")
+class SortIndicatorHeaderRenderer extends DefaultTableCellRenderer {
+
+	private int sortColumn = -1;
+    private boolean ascending = true;
+
+    public SortIndicatorHeaderRenderer(TableCellRenderer renderer) {
+        setHorizontalAlignment(SwingConstants.CENTER);
+        setBorder(UIManager.getBorder("TableHeader.cellBorder"));
+    }
+
+    public void setSortColumn(int column, boolean ascending) {
+        this.sortColumn = column;
+        this.ascending = ascending;
+    }
+
+    @Override
+    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+        Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+        if (column == sortColumn) {
+            c.setFont(c.getFont().deriveFont(Font.BOLD));
+            if (ascending) {
+                ((JLabel) c).setText(value + " ↑");
+            } else {
+                ((JLabel) c).setText(value + " ↓");
+            }
+        } else {
+            ((JLabel) c).setText(value.toString());
+        }
+        return c;
+    }
+}

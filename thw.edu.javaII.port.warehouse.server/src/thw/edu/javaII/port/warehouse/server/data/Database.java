@@ -2476,7 +2476,10 @@ public class Database implements IStorage {
     @Override
     public List<Nachbestellung> getNachbestellungen() {
         List<Nachbestellung> list = new ArrayList<>();
-        String sql = "SELECT * FROM NACHBESTELLUNG";
+        String sql = "SELECT n.pid, n.pname, n.aktuellerbestand, n.phersteller, n.anzahlnachbestellung, n.zukuenftigerbestand, lp.kapazitaet " +
+                     "FROM NACHBESTELLUNG n " +
+                     "LEFT JOIN LAGERBESTAND lb ON n.pid = lb.produkt_id " +
+                     "LEFT JOIN LAGERPLATZ lp ON lb.lagerplatz_id = lp.id";
 
         try (Connection conn = DriverManager.getConnection(dbUrl);
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -2490,6 +2493,7 @@ public class Database implements IStorage {
                 nb.setPhersteller(rs.getString("phersteller"));
                 nb.setAnzahlnachbestellung(rs.getInt("anzahlnachbestellung"));
                 nb.setZukünftigerbestand(rs.getInt("zukuenftigerbestand"));
+                nb.setKapazitaet(rs.getInt("kapazitaet")); // Hinzugefügt: Kapazität setzen
                 list.add(nb);
             }
 

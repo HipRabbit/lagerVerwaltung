@@ -1,0 +1,131 @@
+package thw.edu.javaII.port.warehouse.ui.model;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.table.AbstractTableModel;
+
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
+
+
+/**
+ * TableModel für die Anzeige von Hersteller-Daten in einer JTable.
+ * 
+ * @author Dennis Seifert
+ */
+
+public class NachbestellungTableModel extends AbstractTableModel {
+    private static final long serialVersionUID = 1L;
+    private List<Nachbestellung> data;
+    private String[] columnNames = { "P-ID", "P-Name", "Akt Bestand", "Hersteller", "Anzahl Nachbestellung" };
+
+    /**
+     * Konstruktor zur Initialisierung mit einer Liste von Herstellern.
+     * 
+     * @param data Liste von Hersteller-Objekten
+     */
+    public NachbestellungTableModel(List<Nachbestellung> data) {
+        this.data = new ArrayList<>(data);
+    }
+
+    /**
+     * Setzt neue Daten für die Tabelle und aktualisiert die Ansicht.
+     * 
+     * @param data Neue Liste von Herstellern
+     */
+    public void setData(List<Nachbestellung> data) {
+        this.data = new ArrayList<>(data);
+        fireTableDataChanged();
+    }
+
+    /**
+     * Gibt ein Hersteller-Objekt an einer bestimmten Tabellenzeile zurück.
+     * 
+     * @param row Zeilenindex
+     * @return Hersteller-Objekt oder null, wenn Index ungültig
+     */
+    public Nachbestellung getNachbestellungAt(int row) {
+        if (row >= 0 && row < data.size()) {
+            return data.get(row);
+        }
+        return null;
+    }
+
+    /**
+     * Fügt einen neuen Hersteller zur Tabelle hinzu.
+     * 
+     * @param h Hersteller-Objekt
+     */
+
+    public void addNachbestellung(Nachbestellung h) {
+        data.add(h);
+        fireTableRowsInserted(data.size() - 1, data.size() - 1);
+    }
+
+    /**
+     * Entfernt einen Hersteller aus der Tabelle.
+     * 
+     * @param h Hersteller-Objekt
+     */
+    public void removeNachbestellung(Nachbestellung h) {
+        data.remove(h);
+        fireTableDataChanged();
+    }
+
+    /**
+     * Gibt die Anzahl der Zeilen (Hersteller) zurück.
+     * 
+     * @return Anzahl der Hersteller
+     */
+    @Override
+    public int getRowCount() {
+        return data.size();
+    }
+
+    /**
+     * Gibt die Anzahl der Spalten zurück (ID, Name, Adresse).
+     * 
+     * @return Spaltenanzahl
+     */
+    @Override
+    public int getColumnCount() {
+        return columnNames.length;
+    }
+
+    /**
+     * Gibt den Wert in der angegebenen Zelle zurück.
+     * 
+     * @param rowIndex Zeilenindex
+     * @param columnIndex Spaltenindex
+     * @return Zellwert
+     */
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+    	Nachbestellung h = data.get(rowIndex);
+        switch (columnIndex) {
+            case 0:
+                return h.getPid();
+            case 1:
+                return h.getPname();
+            case 2:
+                return h.getAktuellerbestand();
+            case 3:
+                return h.getPhersteller();
+            case 4:
+                return h.getAnzahlnachbestellung();
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Gibt den Namen der angegebenen Spalte zurück.
+     * 
+     * @param column Spaltenindex
+     * @return Spaltenname
+     */
+    @Override
+    public String getColumnName(int column) {
+        return columnNames[column];
+    }
+}

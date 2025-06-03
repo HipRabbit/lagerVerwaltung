@@ -150,7 +150,7 @@ public class NachbestellungPage extends JPanel {
 class NachbestellungTableModel extends javax.swing.table.AbstractTableModel {
     private static final long serialVersionUID = -5706053428116906813L;
     private java.util.List<Nachbestellung> data = new java.util.ArrayList<>();
-    private String[] columnNames = {"P-ID", "P-Name", "Akt Bestand", "Hersteller", "Anzahl Nachbestellung", "Zukünftiger Bestand"};
+    private String[] columnNames = {"Produkt-ID", "Produkt-Name", "Akt Bestand", "Hersteller", "Anzahl Nachbestellung", "Maximale Kapazität"};
 
     public void setData(java.util.List<Nachbestellung> data) {
         this.data = data != null ? data : new java.util.ArrayList<>();
@@ -198,7 +198,7 @@ class NachbestellungTableModel extends javax.swing.table.AbstractTableModel {
             case 2: return nachbestellung.getAktuellerbestand();
             case 3: return nachbestellung.getPhersteller();
             case 4: return nachbestellung.getAnzahlnachbestellung();
-            case 5: return nachbestellung.getZukünftigerbestand();
+            case 5: return nachbestellung.getKapazitaet();
             default: return null;
         }
     }

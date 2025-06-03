@@ -1,0 +1,190 @@
+package thw.edu.javaII.port.warehouse.ui.model;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Collections;
+import java.util.List;
+
+import javax.swing.table.AbstractTableModel;
+
+import thw.edu.javaII.port.warehouse.model.Nachbestellung;
+import thw.edu.javaII.port.warehouse.ui.common.Session;
+import thw.edu.javaII.port.warehouse.model.LagerBestand;
+import thw.edu.javaII.port.warehouse.model.LagerPlatz;
+
+/**
+ * TableModel für die Anzeige von Nachbestellungs-Daten in einer JTable.
+ * 
+ * @author Dennis Seifert
+ */
+public class NachbestellungTableModel extends AbstractTableModel {
+    private static final long serialVersionUID = 1L;
+    private List<Nachbestellung> data;
+    private String[] columnNames = { "P-ID", "P-Name", "Akt Bestand", "Hersteller", "Anzahl Nachbestellung", "Maximale Kapazität" };
+    private Session session; // Hinzugefügt, um auf Communicator zuzugreifen
+
+    /**
+     * Konstruktor zur Initialisierung mit einer Liste von Nachbestellungen und einer Session.
+     * 
+     * @param data Liste von Nachbestellung-Objekten
+     * @param session Die aktuelle Session für den Zugriff auf Communicator
+     */
+    public NachbestellungTableModel(List<Nachbestellung> data, Session session) {
+        this.data = new ArrayList<>(data != null ? data : new ArrayList<>());
+        this.session = session;
+    }
+
+    /**
+     * Setzt neue Daten für die Tabelle und aktualisiert die Ansicht.
+     * 
+     * @param data Neue Liste von Nachbestellungen
+     */
+    public void setData(List<Nachbestellung> data) {
+        this.data = new ArrayList<>(data != null ? data : new ArrayList<>());
+        fireTableDataChanged();
+    }
+
+    /**
+     * Gibt ein Nachbestellung-Objekt an einer bestimmten Tabellenzeile zurück.
+     * 
+     * @param row Zeilenindex
+     * @return Nachbestellung-Objekt oder null, wenn Index ungültig
+     */
+    public Nachbestellung getNachbestellungAt(int row) {
+        if (row >= 0 && row < data.size()) {
+            return data.get(row);
+        }
+        return null;
+    }
+
+    /**
+     * Fügt eine neue Nachbestellung zur Tabelle hinzu.
+     * 
+     * @param h Nachbestellung-Objekt
+     */
+    public void addNachbestellung(Nachbestellung h) {
+        data.add(h);
+        fireTableRowsInserted(data.size() - 1, data.size() - 1);
+    }
+
+    /**
+     * Entfernt eine Nachbestellung aus der Tabelle.
+     * 
+     * @param h Nachbestellung-Objekt
+     */
+    public void removeNachbestellung(Nachbestellung h) {
+        data.remove(h);
+        fireTableDataChanged();
+    }
+
+    /**
+     * Sortiert die Nachbestellungen nach Produkt-ID.
+     * 
+     * @param ascending true für aufsteigende, false für absteigende Reihenfolge
+     */
+    public void sortById(boolean ascending) {
+        Comparator<Nachbestellung> comparator = Comparator.comparingInt(Nachbestellung::getPid);
+        if (!ascending) {
+            comparator = comparator.reversed();
+        }
+        Collections.sort(data, comparator);
+        fireTableDataChanged();
+    }
+
+    /**
+     * Sortiert die Nachbestellungen nach Produktnamen.
+     * 
+     * @param ascending true für aufsteigende, false für absteigende Reihenfolge
+     */
+    public void sortByName(boolean ascending) {
+        Comparator<Nachbestellung> comparator = Comparator.comparing(Nachbestellung::getPname);
+        if (!ascending) {
+            comparator = comparator.reversed();
+        }
+        Collections.sort(data, comparator);
+        fireTableDataChanged();
+    }
+
+    /**
+     * Gibt die Anzahl der Zeilen (Nachbestellungen) zurück.
+     * 
+     * @return Anzahl der Nachbestellungen
+     */
+    @Override
+    public int getRowCount() {
+        return data.size();
+    }
+
+    /**
+     * Gibt die Anzahl der Spalten zurück (P-ID, P-Name, Akt Bestand, Hersteller, Anzahl Nachbestellung, Maximale Kapazität).
+     * 
+     * @return Spaltenanzahl
+     */
+    @Override
+    public int getColumnCount() {
+        return columnNames.length;
+    }
+
+    /**
+     * Gibt den Wert in der angegebenen Zelle zurück.
+     * 
+     * @param rowIndex Zeilenindex
+     * @param columnIndex Spaltenindex
+     * @return Zellwert
+     */
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        Nachbestellung nachbestellung = data.get(rowIndex);
+        switch (columnIndex) {
+            case 0:
+                return nachbestellung.getPid();
+            case 1:
+                return nachbestellung.getPname();
+            case 2:
+                return nachbestellung.getAktuellerbestand();
+            case 3:
+                return nachbestellung.getPhersteller();
+            case 4:
+                return nachbestellung.getAnzahlnachbestellung();
+            case 5:
+                return getMaxCapacityForProduct(nachbestellung.getPid());
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Gibt den Namen der angegebenen Spalte zurück.
+     * 
+     * @param column Spaltenindex
+     * @return Spaltenname
+     */
+    @Override
+    public String getColumnName(int column) {
+        return columnNames[column];
+    }
+
+    /**
+     * Ruft die maximale Kapazität für ein Produkt basierend auf seiner ID ab.
+     * 
+     * @param productId Die Produkt-ID
+     * @return Die maximale Kapazität des zugehörigen Lagerplatzes oder 0, wenn nicht gefunden
+     */
+    private int getMaxCapacityForProduct(int productId) {
+        if (session == null || session.getCommunicator() == null) {
+            return 0;
+        }
+        List<LagerBestand> lagerBestandList = session.getCommunicator().getBestand();
+        if (lagerBestandList != null) {
+            for (LagerBestand lb : lagerBestandList) {
+                if (lb.getProdukt_id().getId() == productId) {
+                    LagerPlatz lagerPlatz = lb.getLagerplatz_id();
+                    if (lagerPlatz != null) {
+                        return lagerPlatz.getKapazitaet();
+                    }
+                }
+            }
+        }
+        return 0; // Rückgabe 0, wenn keine Kapazität gefunden wird
+    }
+}

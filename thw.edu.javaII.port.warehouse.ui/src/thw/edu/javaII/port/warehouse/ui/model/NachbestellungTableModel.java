@@ -7,17 +7,15 @@ import javax.swing.table.AbstractTableModel;
 
 import thw.edu.javaII.port.warehouse.model.Nachbestellung;
 
-
 /**
  * TableModel für die Anzeige von Hersteller-Daten in einer JTable.
  * 
  * @author Dennis Seifert
  */
-
 public class NachbestellungTableModel extends AbstractTableModel {
     private static final long serialVersionUID = 1L;
     private List<Nachbestellung> data;
-    private String[] columnNames = { "P-ID", "P-Name", "Akt Bestand", "Hersteller", "Anzahl Nachbestellung", "Zukünftiger Bestand" };
+    private String[] columnNames = {"Produkt-ID", "Produkt-Name", "Akt Bestand", "Hersteller", "Anzahl Nachbestellung", "Zukünftiger Bestand"};
 
     /**
      * Konstruktor zur Initialisierung mit einer Liste von Herstellern.
@@ -56,7 +54,6 @@ public class NachbestellungTableModel extends AbstractTableModel {
      * 
      * @param h Hersteller-Objekt
      */
-
     public void addNachbestellung(Nachbestellung h) {
         data.add(h);
         fireTableRowsInserted(data.size() - 1, data.size() - 1);
@@ -101,7 +98,7 @@ public class NachbestellungTableModel extends AbstractTableModel {
      */
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-    	Nachbestellung h = data.get(rowIndex);
+        Nachbestellung h = data.get(rowIndex);
         switch (columnIndex) {
             case 0:
                 return h.getPid();

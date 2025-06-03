@@ -1,0 +1,77 @@
+package thw.edu.javaII.port.warehouse.model;
+
+import java.io.Serializable;
+
+public class Nachbestellung implements Serializable {
+    private static final long serialVersionUID = 8230932661185246836L;
+    private static final String PRINT_FORMAT = "[%-20s - %-50s - %-30s - %-40s]";
+    private int pid;
+    private String pname;
+    private int aktuellerbestand;
+    private String phersteller;
+    private int anzahlnachbestellung;
+    // Entferne zukünftigerbestand
+
+    public Nachbestellung() {
+    }
+
+    public Nachbestellung(int pid, String pname, int aktuellerbestand, String phersteller, int anzahlnachbestellung) {
+        super();
+        this.pid = pid;
+        this.pname = pname;
+        this.aktuellerbestand = aktuellerbestand;
+        this.phersteller = phersteller;
+        this.anzahlnachbestellung = anzahlnachbestellung;
+    }
+
+    public String toListString() {
+        return String.format(PRINT_FORMAT, pid, pname, aktuellerbestand, phersteller, anzahlnachbestellung);
+    }
+
+    @Override
+    public String toString() {
+        return pname != null ? pname : "Unbenannte Nachbestellung";
+    }
+
+    public int getPid() {
+        return pid;
+    }
+
+    public void setPid(int pid) {
+        this.pid = pid;
+    }
+
+    public String getPname() {
+        return pname;
+    }
+
+    public void setPname(String pname) {
+        this.pname = pname;
+    }
+
+    public int getAktuellerbestand() {
+        return aktuellerbestand;
+    }
+
+    public void setAktuellerbestand(int aktuellerbestand) {
+        this.aktuellerbestand = aktuellerbestand;
+    }
+
+    public String getPhersteller() {
+        return phersteller;
+    }
+
+    public void setPhersteller(String phersteller) {
+        this.phersteller = phersteller;
+    }
+
+    public int getAnzahlnachbestellung() {
+        return anzahlnachbestellung;
+    }
+
+    public void setAnzahlnachbestellung(int anzahlnachbestellung) {
+        this.anzahlnachbestellung = anzahlnachbestellung;
+    }
+
+    // Entferne getZukünftigerbestand und setZukünftigerbestand
+}
